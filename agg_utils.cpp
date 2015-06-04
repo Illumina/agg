@@ -295,9 +295,9 @@ int writeSiteList(const string& chromosome, vector<marker> & sites,const string&
     orec->qual = sites[i].qual;
     for(int j=0;j<3;j++) 
       gn[j] = sites[i].counts[j];
-    bcf_update_info_int32(hdr, orec, "GN", &gn, 3);	
     bcf_update_info_int32(hdr, orec, "AN", &(sites[i].AN), 1);	
     bcf_update_info_int32(hdr, orec, "AC", &(sites[i].AC), 1);	
+    bcf_update_info_int32(hdr, orec, "GN", &gn, 3);	
     float af = (float)sites[i].AC/(float)sites[i].AN;
     bcf_update_info_float(hdr, orec, "AF", &af, 1);	
     //    bcf_update_info_int32(hdr, orec, "NPASS", &(sites[i].npass), 1);	
