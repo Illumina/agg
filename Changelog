@@ -1,0 +1,16 @@
+2014-06-04
+*moving to github
+
+2015-06-03
+*moved to vt for variant normalisation
+*fixed the AD splitting issue by reheadering the vcfs upon ingestion
+*added INFO/GN (genotype counts)
+
+2015-04-17
+*initdb.py now submits jobs that run -nprocess processes, suitable for clusters where an entire node is reserved per job
+*added the updatedb.py script which performs bulk ingestion of new samples into the database, also useful for adding samples that failed initial ingestion
+*collate step is now performed by multi_collate.py which performs whole genome collation/concatenation with nprocess proccesses
+*FORMAT field now includes DP/AD/GQ for any genotype containing and ALT (todo: homref)
+
+2015-03-20
+*initial version deployed to Cambridge HPC
