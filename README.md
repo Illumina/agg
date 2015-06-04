@@ -50,7 +50,7 @@ This is all peformed by the `initdb.py` script and utilises either Sun Grid Engi
 ```
 #qsubs our ingestion jobs. gvcfs.txt is simply a list of gvcfs. agg is just the agg install path.
 python agg/scripts/initdb.py -db database/ -files gvcfs.txt 
-       			     	       \ -agg ~/kimura/agg/
+       			     	       \ -agg ~/agg/
 				       \ -ref /illumina/scratch/iGenomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa
 				       \ -chrom_prefix chr
 				       \ -nprocess 8
@@ -130,8 +130,8 @@ chr20   63967   .       A       G       244     .       AN=20;AC=1;NPASS=1      
 You might notice this process is rather slow.  We are currently working on better performing data structures.  In the interim, you can simply perform queries in genomics chunks and concatenate them. We provide a tool to specify sensibly size chunks.  See below:
 
 ```
-$ ~/kimura/agg/chunker -n 100000 testdb2/sites.bcf > regions.txt
-$ for r in `cat regions.txt`;do echo genotype testdb2/ -r ${r} -O b -o ${r}.bcf ;done | xargs -P 8 -n 8 ~/kimura/agg/agg
+$ ~/agg/chunker -n 100000 testdb2/sites.bcf > regions.txt
+$ for r in `cat regions.txt`;do echo genotype testdb2/ -r ${r} -O b -o ${r}.bcf ;done | xargs -P 8 -n 8 ~/agg/agg
 $ for r in `cat regions.txt`;do echo ${r}.bcf;done > file_list.txt
 $ bcftools concat -f file_list.txt -O b -o final.bcf
 ```

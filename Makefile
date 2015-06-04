@@ -17,7 +17,7 @@ static: all
 debug: CFLAGS = -pg -g -Wall  $(IFLAGS) -Wno-write-strings
 debug: all 
 
-ALL=canon agg version.h $(HTSLIB) bcftools-1.2 gvcftools-0.16 vt-0.57/vt # sqltest
+ALL=chunker canon agg version.h $(HTSLIB) bcftools-1.2 gvcftools-0.16 vt-0.57/vt # sqltest
 
 htslib-1.2.1/libhts.a:
 	tar -xjf htslib-1.2.1.tar.bz2 && \
