@@ -8,8 +8,9 @@ The only compilation dependency is [htslib](http://www.htslib.org/) which is inc
 
 * [gvcftools 0.16](https://sites.google.com/site/gvcftools/)
 * [bcftools 1.2](http://samtools.github.io/bcftools/bcftools.html)
+* [vt 0.57](https://github.com/atks/vt)
 
-the Makefile attempts to download and compile both of these.
+the Makefile attempts to build/download and compile both of these.
 
 ```
 cd kimura/agg/
