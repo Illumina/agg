@@ -96,7 +96,7 @@ Filter options:
 Example:
 
 ```
-[joconnell@ussd-prd-lndt-b-8-1 test]$ ~/joconnell/agg.v2/agg genotype database/ -r chr20 -O b -o test.chr20.bcf
+[joconnell@ussd-prd-lndt-b-8-1 test]$ ~/agg/agg genotype database/ -r chr20 -O b -o test.chr20.bcf
 Using database database/
 Writing output to test.chr20.bcf
 Genotyping region chr20
