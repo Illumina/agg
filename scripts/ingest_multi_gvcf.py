@@ -33,10 +33,10 @@ if __name__ == "__main__":
     vt  = args.agg+"/vt-0.57/vt"
     bcftools = args.agg+"/bcftools-1.2/bcftools"
     get_called_regions = args.agg+"/gvcftools-0.16/bin/get_called_regions"
-    bgzip = args.agg+"/bcftools-1.2/htslib-1.2.1/bgzip"
+    bgzip = args.agg+"/htslib-1.2.1/bgzip"
     extract_variants = args.agg+"/gvcftools-0.16/bin/extract_variants"
     canon = args.agg+"/canon"
-    tabix = args.agg+"/bcftools-1.2/htslib-1.2.1/tabix"
+    tabix = args.agg+"/htslib-1.2.1/tabix"
 
     ##sub command that will be called per gvcf
     def ingest(fname):
@@ -54,7 +54,7 @@ if __name__ == "__main__":
         print("Making %s..."%outbcf)
         subprocess.call('%s view -h %s | %s annotate  -x ^INFO/SNVSB  |  sed s/"##FORMAT=<ID=AD,Number=."/"##FORMAT=<ID=AD,Number=R"/g > %s.hdr'%(bcftools,fname,bcftools,outbcf),shell=True)
 
-        norm = "%s annotate -Ou -x ^INFO/SNVSB | %s reheader -h new.hdr - | %s +fixploidy -Ou | %s norm -m -any | %s normalize -r %s - "%(bcftools,bcftools,bcftools,bcftools,vt,args.ref)
+        norm = "%s annotate -Ou -x ^INFO/SNVSB | %s reheader -h %s.hdr - | %s +fixploidy -Ou | %s norm -m -any | %s normalize -r %s - "%(bcftools,bcftools,outbcf,bcftools,bcftools,vt,args.ref)
 
         cmd=["zcat",fname,"|",extract_variants,"|"] + [norm] + ["|",canon,"-",">",outbcf]
 
