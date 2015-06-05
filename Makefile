@@ -19,11 +19,10 @@ debug: all
 
 ALL=chunker canon agg version.h $(HTSLIB) bcftools-1.2 gvcftools-0.16 vt-0.57/vt # sqltest
 
-htslib-1.2.1/:
-	tar -xjf htslib-1.2.1.tar.bz2 
-htslib-1.2.1/libhts.a: htslib-1.2.1/
+$(HTSLIB):
+	tar -xjf htslib-1.2.1.tar.bz2 && \
 	cd htslib-1.2.1/ && \
-	make
+	make all
 version.h: 
 	git log --pretty=format:'#define VERSION "%h"' -n 1 > version.h
 	echo >> version.h
