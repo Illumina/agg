@@ -23,7 +23,7 @@ htslib-1.2.1/:
 	tar -xjf htslib-1.2.1.tar.bz2 
 htslib-1.2.1/libhts.a: htslib-1.2.1/
 	cd htslib-1.2.1/ && \
-	make libhts.a
+	make
 version.h: 
 	git log --pretty=format:'#define VERSION "%h"' -n 1 > version.h
 	echo >> version.h
