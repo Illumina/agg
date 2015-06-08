@@ -26,7 +26,7 @@ if __name__ == "__main__":
     time0 = time.time()
 
     os.environ["BCFTOOLS_PLUGINS"] = args.agg+"/bcftools-1.2/plugins/"
-    os.environ["LD_LIBRARY_PATH"] = args.agg+"/bcftools-1.2/htslib-1.2.1/:$LD_LIBRAR_PATH"
+    os.environ["LD_LIBRARY_PATH"] = args.agg+"/bcftools-1.2/htslib-1.2.1/:$LD_LIBRARY_PATH"
 
 
     ##binaries
