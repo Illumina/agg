@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
 
         if args.batch=="qsub":
-            qsub = ["qsub","-q","devel-s.q","-pe","threaded",str(args.nprocess),"-e",db_dir+"/tmp","-o",db_dir+"/tmp","-terse","-S","/bin/bash","-cwd","-b","y",sys.executable,scripts+"ingest_multi_gvcf.py"]
+            qsub = ["qsub","-V","-q","devel-s.q","-pe","threaded",str(args.nprocess),"-e",db_dir+"/tmp","-o",db_dir+"/tmp","-terse","-S","/bin/bash","-cwd","-b","y",sys.executable,scripts+"ingest_multi_gvcf.py"]
         else: 
             qsub = ["sbatch","-V","--time=1:00:00","--parsable",scripts+"ingest_multi_gvcf.py"]
 
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     jids = []
 
     if args.batch=="qsub":        
-        cmd = ["qsub","-pe","threaded",str(args.nprocess),"-e",db_dir+"/tmp","-o",db_dir+"/tmp","-hold_jid",hold,"-terse","-N","collate","-S","/bin/bash","-cwd","-b","y",sys.executable,scripts+"multi_collate.py",db_dir,"-agg",args.agg+"/","-nprocess",str(args.nprocess)]
+        cmd = ["qsub","-V","-pe","threaded",str(args.nprocess),"-e",db_dir+"/tmp","-o",db_dir+"/tmp","-hold_jid",hold,"-terse","-N","collate","-S","/bin/bash","-cwd","-b","y",sys.executable,scripts+"multi_collate.py",db_dir,"-agg",args.agg+"/","-nprocess",str(args.nprocess)]
     else: 
         cmd = ["sbatch","-V","--time=2:00:00","-d",hold,"--parsable",scripts+"multi_collate.py",db_dir,"-agg",args.agg+"/","-nprocess",str(args.nprocess)]
     print " ".join(cmd)
