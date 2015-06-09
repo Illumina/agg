@@ -1,8 +1,8 @@
 CC = gcc
 CXX = g++
 
-HTSLIB = htslib-1.2.1/libhts.a
-IFLAGS = -Ihtslib-1.2.1/ 
+HTSLIB = htslib-1.2.1/
+IFLAGS = -I$(HTSLIB)
 LFLAGS = -lz -lpthread -lm -ldl 
 
 //CFLAGS = -pg -g -Wall $(IFLAGS)  -Wno-write-strings 
@@ -17,9 +17,9 @@ static: all
 debug: CFLAGS = -pg -g -Wall  $(IFLAGS) -Wno-write-strings
 debug: all 
 
-ALL=chunker canon agg version.h $(HTSLIB) bcftools-1.2 gvcftools-0.16 vt-0.57/vt # sqltest
+ALL=chunker canon agg version.h bcftools-1.2 gvcftools-0.16 vt-0.57/vt $(HTSLIB) $(HTSLIB)/libhts.a htslib-1.2.1/bgzip htslib-1.2.1/tabix # sqltest
 
-$(HTSLIB):
+$(HTSLIB) $(HTSLIB)/libhts.a htslib-1.2.1/bgzip htslib-1.2.1/tabix:
 	tar -xjf htslib-1.2.1.tar.bz2 && \
 	cd htslib-1.2.1/ && \
 	make all
@@ -36,10 +36,10 @@ sampleReader.o: sampleReader.cpp sampleReader.h htslib-1.2.1/
 	$(CXX) $(CFLAGS) -c sampleReader.cpp  
 sampleMerger.o: sampleMerger.cpp sampleMerger.h htslib-1.2.1/
 	$(CXX) $(CFLAGS) -c sampleMerger.cpp  
-canon: canon.cpp  utils.o $(HTSLIB)
-	$(CXX) $(CFLAGS) utils.o canon.cpp -o canon $(HTSLIB) $(LFLAGS)
-chunker: chunker.cpp $(HTSLIB)
-	$(CXX) $(CFLAGS) chunker.cpp -o chunker $(HTSLIB) $(LFLAGS)
+canon: canon.cpp  utils.o $(HTSLIB)/libhts.a
+	$(CXX) $(CFLAGS) utils.o canon.cpp -o canon $(HTSLIB)/libhts.a $(LFLAGS)
+chunker: chunker.cpp $(HTSLIB)/libhts.a
+	$(CXX) $(CFLAGS) chunker.cpp -o chunker $(HTSLIB)/libhts.a $(LFLAGS)
 agg_utils.o: agg_utils.cpp agg.h htslib-1.2.1/
 	$(CXX) $(CFLAGS) -c $< 
 agg_collate.o: agg_collate.cpp agg.h htslib-1.2.1/
@@ -50,8 +50,8 @@ agg_count.o: agg_count.cpp agg.h htslib-1.2.1/
 	$(CXX) $(CFLAGS) -c $<  
 agg_update.o: agg_update.cpp agg.h htslib-1.2.1/
 	$(CXX) $(CFLAGS) -c $<  
-agg: agg.cpp sampleReader.o sampleMerger.o utils.o agg_utils.o agg_collate.o  agg_genotype.o  agg_update.o agg_count.o version.h $(HTSLIB)
-	$(CXX) $(CFLAGS)  -o agg agg.cpp sampleReader.o sampleMerger.o utils.o agg_utils.o agg.h agg_collate.o agg_genotype.o agg_update.o $(HTSLIB) agg_count.o $(LFLAGS) 
+agg: agg.cpp sampleReader.o sampleMerger.o utils.o agg_utils.o agg_collate.o  agg_genotype.o  agg_update.o agg_count.o version.h $(HTSLIB)/libhts.a
+	$(CXX) $(CFLAGS)  -o agg agg.cpp sampleReader.o sampleMerger.o utils.o agg_utils.o agg.h agg_collate.o agg_genotype.o agg_update.o $(HTSLIB)/libhts.a agg_count.o $(LFLAGS) 
 mergeBlocks: mergeBlocks.cpp
 	$(CXX) $(CFLAGS) mergeBlocks.cpp -o mergeBlocks
 gvcftools-0.16:
