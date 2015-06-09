@@ -37,6 +37,9 @@ if __name__ == "__main__":
     extract_variants = args.agg+"/gvcftools-0.16/bin/extract_variants"
     canon = args.agg+"/canon"
     tabix = args.agg+"/htslib-1.2.1/tabix"
+    for f in [vt,bcftools,get_called_regions,bgzip,extract_variants,canon,tabix]:
+        if not os.path.isfile(f):
+            sys.exit(f+" does not exist")
 
     ##sub command that will be called per gvcf
     def ingest(fname):
