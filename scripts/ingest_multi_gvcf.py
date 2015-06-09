@@ -57,7 +57,7 @@ if __name__ == "__main__":
         print("Making %s..."%outbcf)
         subprocess.call('%s view -h %s | %s annotate  -x ^INFO/SNVSB  |  sed s/"##FORMAT=<ID=AD,Number=."/"##FORMAT=<ID=AD,Number=R"/g > %s.hdr'%(bcftools,fname,bcftools,outbcf),shell=True)
 
-        norm = "%s annotate -Ou -x ^INFO/SNVSB | %s reheader -h %s.hdr - | %s +fixploidy -Ou | %s norm -m -any | %s normalize -r %s - "%(bcftools,bcftools,outbcf,bcftools,bcftools,vt,args.ref)
+        norm = "%s annotate -Ou -x ^INFO/SNVSB | %s reheader -h %s.hdr - | %s +fixploidy -Ou | %s norm -m -any | %s normalize -r %s - | %s uniq - "%(bcftools,bcftools,outbcf,bcftools,bcftools,vt,args.ref,vt)
 
         cmd=["zcat",fname,"|",extract_variants,"|"] + [norm] + ["|",canon,"-",">",outbcf]
 
