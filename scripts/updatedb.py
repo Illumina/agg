@@ -10,9 +10,16 @@ def get_sample_id(f_name):
 
 
 def check_binaries(args):
-    for fname in [args.agg+"/bcftools-1.2/bcftools",args.agg+"/gvcftools-0.16/bin/extract_variants",args.agg+"/gvcftools-0.16/bin/get_called_regions",args.agg+"/bcftools-1.2/htslib-1.2.1/bgzip",args.agg+"/bcftools-1.2/htslib-1.2.1/tabix",args.agg+"/canon",args.agg+"/agg"]:
-        if(not os.path.isfile(fname)):
-            sys.exit(fname+" not found!\nCheck your provided paths.")
+    vt  = args.agg+"/vt-0.57/vt"
+    bcftools = args.agg+"/bcftools-1.2/bcftools"
+    get_called_regions = args.agg+"/gvcftools-0.16/bin/get_called_regions"
+    bgzip = args.agg+"/htslib-1.2.1/bgzip"
+    extract_variants = args.agg+"/gvcftools-0.16/bin/extract_variants"
+    canon = args.agg+"/canon"
+    tabix = args.agg+"/htslib-1.2.1/tabix"
+    for f in [vt,bcftools,get_called_regions,bgzip,extract_variants,canon,tabix]:
+        if not os.path.isfile(f):
+            sys.exit(f+" not found!\nCheck your provided paths.")
 
 if __name__ == "__main__":
 

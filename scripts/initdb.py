@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
 
         if args.batch=="qsub":
-            qsub = ["qsub","-q","devel-s.q","-pe","threaded",str(args.nprocess),"-e",db_dir+"/tmp","-o",db_dir+"/tmp","-terse","-S","/bin/bash","-cwd","-b","y",sys.executable,scripts+"ingest_multi_gvcf.py"]
+            qsub = ["qsub","-pe","threaded",str(args.nprocess),"-e",db_dir+"/tmp","-o",db_dir+"/tmp","-terse","-S","/bin/bash","-cwd","-b","y",sys.executable,scripts+"ingest_multi_gvcf.py"]
         else: 
             qsub = ["sbatch","--reservation=GEL","--time=1:00:00","--parsable",scripts+"ingest_multi_gvcf.py"]
 
