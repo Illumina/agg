@@ -17,7 +17,7 @@ static: all
 debug: CFLAGS = -pg -g -Wall  $(IFLAGS) -Wno-write-strings
 debug: all 
 
-ALL=chunker canon agg version.h bcftools-1.2 gvcftools-0.16 vt-0.57/vt $(HTSLIB) $(HTSLIB)/libhts.a htslib-1.2.1/bgzip htslib-1.2.1/tabix # sqltest
+ALL=bedmerge chunker canon agg version.h bcftools-1.2 gvcftools-0.16 vt-0.57/vt $(HTSLIB) $(HTSLIB)/libhts.a htslib-1.2.1/bgzip htslib-1.2.1/tabix # sqltest
 
 $(HTSLIB) $(HTSLIB)/libhts.a htslib-1.2.1/bgzip htslib-1.2.1/tabix:
 	tar -xjf htslib-1.2.1.tar.bz2 && \
@@ -38,6 +38,10 @@ sampleMerger.o: sampleMerger.cpp sampleMerger.h htslib-1.2.1/
 	$(CXX) $(CFLAGS) -c sampleMerger.cpp  
 canon: canon.cpp  utils.o $(HTSLIB)/libhts.a
 	$(CXX) $(CFLAGS) utils.o canon.cpp -o canon $(HTSLIB)/libhts.a $(LFLAGS)
+tabReader.o: tabReader.cpp tabReader.h
+	$(CXX) $(CFLAGS) -c tabReader.cpp 
+bedmerge: bedmerge.cpp tabReader.o utils.o  $(HTSLIB)/libhts.a
+	$(CXX) $(CFLAGS) tabReader.o utils.o bedmerge.cpp -o bedmerge $(HTSLIB)/libhts.a $(LFLAGS)
 chunker: chunker.cpp $(HTSLIB)/libhts.a
 	$(CXX) $(CFLAGS) chunker.cpp -o chunker $(HTSLIB)/libhts.a $(LFLAGS)
 agg_utils.o: agg_utils.cpp agg.h htslib-1.2.1/
