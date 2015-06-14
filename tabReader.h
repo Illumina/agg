@@ -1,6 +1,11 @@
 #pragma once
 #include "utils.h"
 
+#include <math.h>
+#include <map>
+#include <vector>
+
+
 extern "C" {
 #include <htslib/bgzf.h>
 #include <htslib/tbx.h>

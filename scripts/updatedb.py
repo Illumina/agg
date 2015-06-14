@@ -76,8 +76,17 @@ if __name__ == "__main__":
         sample_db_outfile.write("\n")
 
     jids = []
-    ingestion_list = [(get_sample_id(val.strip()),val.strip()) for val in open(files, "rb").read().split()]
+    ingestion_list=[]
+    for f in open(files, "rb"):
+        f=f.strip()
+        print f
+        if os.path.isfile(f):
+            ingestion_list.append((get_sample_id(f.strip()),f.strip()))
+        else:
+            sys.stderr.write("Warning: %s does not exist! Will not ingest for obvious reasons\n"%f)
+
     ingestion_list = [(sampleid,gvcf) for sampleid,gvcf in ingestion_list if sampleid not in sample_db]
+
     for sampleid,gvcf in ingestion_list:     
         print sampleid,gvcf
 
@@ -99,6 +108,7 @@ if __name__ == "__main__":
             qsub = ["sbatch","--reservation=GEL","--reservation=GEL","--time=1:00:00","--parsable",scripts+"ingest_multi_gvcf.py"]
 
         cmd = qsub + [",".join(input_gvcfs), db_dir] + paths        
+
         print " ".join(cmd)
         jids.append(subprocess.check_output(cmd).strip())
 

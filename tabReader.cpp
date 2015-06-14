@@ -1,14 +1,4 @@
-#include <math.h>
-#include <map>
-#include <getopt.h>
-#include <vector>
-
-#include "utils.h"
 #include "tabReader.h"
-
-extern "C" {
-#include "htslib/synced_bcf_reader.h"
-}
 
 #define DEBUG 0
 
