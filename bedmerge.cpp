@@ -12,14 +12,12 @@ extern "C" {
 
 using namespace std;
 
-int main(int argc,char **argv) {
-  assert(argc>=3);
 
-
+int merge(vector<string> & files,string region) {
   vector< tabReader* > r;
-  int n=argc-2;
-  for(int i=2;i<argc;i++) 
-    r.push_back(new tabReader(argv[i],"") );
+  int n=files.size();
+  for(int i=0;i<n;i++) 
+    r.push_back(new tabReader(files[i],region) );
   
   cerr << "opened "<<n<<" bed files for merging..."<<endl;
 
@@ -58,5 +56,30 @@ int main(int argc,char **argv) {
  
   for(int i=0;i<n;i++) delete(r[i]);
   cerr << "finished."<<endl;
+  return(0);
+}
+
+
+int main(int argc,char **argv) {
+  string reg="";
+  int c;
+  static struct option loptions[] =    {
+    {"regions",1,0,'r'},
+    {0,0,0,0}
+  };
+  
+  while ((c = getopt_long(argc, argv, "r:",loptions,NULL)) >= 0) {  
+    switch (c)
+      {
+      case 'r': reg=optarg; break;    
+      case '?': die("lol");
+      default: die("Unknown argument:"+(string)optarg+"\n");
+      }
+  }
+  
+  vector<string> files;
+  while(optind<argc) files.push_back((string)argv[optind++]);   
+
+  merge(files,reg);
   return(0);
 }
