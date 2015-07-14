@@ -244,7 +244,13 @@ int Genotype::update(bcf1_t *line,bcf_srs_t *reader) {
   bcf_hdr_t *hdr = reader->readers[0].header;
   int mgt=2;
   ret = bcf_get_genotypes(hdr, line, &gt, &mgt);
-  assert(ret==2);
+  assert(ret==2||ret==1);
+  if(ret==1)
+    gt[1] = gt[0];
+  // if(ret!=2)  {
+  //   cerr << line->pos + 1 << " " <<  line->n_allele << endl;
+  //   die("ngt!=2");
+  // }
   pass = bcf_has_filter(hdr, line, ".");  
 
   //  if(bcf_gt_allele(gt[0])>0 || bcf_gt_allele(gt[1])>0) {
