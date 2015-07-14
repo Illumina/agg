@@ -1,4 +1,7 @@
-2014-06-04
+2015-07-14
+*GEL/UCAM hotfix: added support for hemizygous sites.  Just copies the hemizygous allele to the second allele
+
+2015-06-04
 *agg repo on private github
 
 2015-06-03
