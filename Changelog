@@ -1,7 +1,8 @@
-2015-07-14
-*GEL/UCAM hotfix: added support for hemizygous sites.  Just copies the hemizygous allele to the second allele
+2014-08-04
+*agg2 deprecated and moved to agg2/
+*new agg3 added to agg3/
 
-2015-06-04
+2014-06-04
 *agg repo on private github
 
 2015-06-03
@@ -17,3 +18,5 @@
 
 2015-03-20
 *initial version deployed to Cambridge HPC
+
+
