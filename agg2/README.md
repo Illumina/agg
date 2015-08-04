@@ -1,3 +1,5 @@
+Note: agg2 is deprecated. I am just leaving this here for posterity.
+
 agg2: a utility for aggregating gvcfs
 
 Copyright (c) 2015, Illumina, Inc. All rights reserved. See LICENSE.pdf for further details.
