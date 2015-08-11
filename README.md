@@ -66,11 +66,13 @@ These files are the input for `agg ingest2`, which builds a chunk, and is explai
 #####Genotyping and merging agg chunks
 
 ######Filtering
-The output from `agg` is very raw, containing all variants called in any sample, filtered or not. How exactly to filter this down to a high quality list of variants is a research topic in itself.  A basic first pass may involve:
+The output from `agg` is very raw, containing all variants called in any sample, filtered or not. How exactly to filter this down to a high quality list of variants is a research topic in itself.  A simplistic first pass may involve:
 
-*set genotypes where GQ<10 to missing
-*remove sites where very few genotypes are called based on the previous metric
-*remove sites where QUAL<30
+* set genotypes where GQ<10 to missing
+* remove sites where only 50% of genotypes are called (after GQ<10 removal)
+* remove sites where QUAL<30
+
+this can be achieved by:
 ```
 bcftools filter -e 'FMT/GQ<10' -S . -O u | bcftools view -i 'QUAL>=30 & AN>500' -Ob -o merged.flt.bcf
 ```
