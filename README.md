@@ -37,7 +37,9 @@ Commands:
 ```
 
 #####Building an agg chunk
-This is a two stage process using the `agg ingest1` and `agg ingest2` commands.  The individual gvcfs are first pre-processed with `ingest1` and then merged into a chunk with `agg ingest2`.  In the future, we will aim to wrap these into one (faster) `ingest` command.
+The input to agg's genotyping routine is one or more agg "chunks".  As new batches of samples arrive they can be rolled into a new chunk, without the need to modify previous chunks containing older samples. 
+
+Creating a chunk is currently a two stage process using the `agg ingest1` and `agg ingest2` commands.  The individual gvcfs are first pre-processed with `ingest1` and then merged into a chunk with `agg ingest2`.  In the future, we plain to wrap these these two steps into a single (faster) `ingest` command.
 
 ######ingest1: pre-process gvcfs
 You can do this to one gvcf like so:
@@ -47,26 +49,39 @@ $ agg ingest1 sample1.genome.vcf.gz -o ingest1/sample1
 Input: sample1.genome.vcf.gz    Output: ingest1/sample1
 depth: ingest1/sample1.dpt
 variants: ingest1/sample1.bcf
+Indexing ingest1/sample1.bcf
+Done.
 ```
 this takes ~10 minutes.
 
-In practice, we have 100s to 1000s of these and want to automate things. Say you have a 16 core node and want to build an agg chunk from 500 gvcfs listed in `gvcfs.txt`.  We can leverage the multiple CPUs using unix `xargs`.
+In practice, we have 100s to 1000s of gvcfs and want to automate things. Say you have a 16 core node and want to build an agg chunk from 500 gvcfs listed in `gvcfs.txt`.  We can leverage the multiple CPUs using unix `xargs`.
 ```
-$ for i in `cat gvcfs.txt`;do out=$(basename ${i%.genome.vcf.gz});echo ingest1 $i -o $out;done | xargs -p 16 -n 4 agg
+$ for i in `cat gvcfs.txt`;do out=$(basename ${i%.genome.vcf.gz});echo ingest1 $i -o ingest1/${out};done | xargs -p 16 -n 4 agg
 ```
 note you can replace `cat gvcfs.txt` with `find . -name '*.genome.vcf.gz` or similar.
 
-These files are the input for `agg ingest2`, which builds a chunk, and is explained next. These intermediate files are rather large, but after building a chunk they can be disposed of.
+These files are the input for `agg ingest2`, which builds a chunk and is explained next. These intermediate files are rather large (1GB-2GB per sample), but after building a chunk they can be disposed of. You may wish to store them on local scratch space if it is available.
 
 ######ingest2: merge temporary files into a chunk
+Let's roll how intermediate files into five separate agg chunks. We will use `xargs` to leverage multiple cores again.
 ```
-$ agg ingest2
+$ find ingest1/ -name '*.bcf' > ingest1.txt ##get bcfs from ingest1 step
+$ split -d -l 100 ingest1.txt chunk_ #splits the file into 5 groups of 100
+$ ls chunk_*
+chunk_00  chunk_01  chunk_02  chunk_03  chunk_04
+$ for i in chunk_*;do echo ingest2 -l $i -@4 -o $i;done | xargs -n 7 -P 16
+...
+$ ls chunk_*.*
 ```
 
 #####Genotyping and merging agg chunks
 ```
-$ agg genotype -r chr1 chunk1.bcf chunk2.bcf -Ob -o merged.chr1.bcf
+$ agg genotype -r chr1 chunk_00.bcf chunk_01.bcf chunk_02.bcf chunk_04.bcf -Ob -o merged.chr1.bcf
 $ bcftools index merged.bcf
+```
+again `xargs` is your friend:
+```
+$ for i in {1..22};do echo genotype -r chr${i} chunk_00.bcf chunk_01.bcf chunk_02.bcf chunk_04.bcf -Ob -o merged.chr${i}.bcf;done | xargs agg -n 10 -P 16
 ```
 
 ######Filtering
