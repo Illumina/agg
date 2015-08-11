@@ -240,8 +240,8 @@ int aggReader::next() {
 	if(line[i]->rid != cur_chr || line_count==0) {
 	  cur_chr = line[i]->rid;
 	  while(dp_chr!=cur_chr)   	    moveDepthForward();
-	  cerr << "Genotyping contig " << bcf_hdr_int2id(var_rdr->readers[i].header,BCF_DT_CTG,cur_chr)<<endl;
 	  cerr <<line_count<<" variants genotyped." <<endl;
+	  cerr << "Genotyping contig " << bcf_hdr_int2id(var_rdr->readers[i].header,BCF_DT_CTG,cur_chr)<<endl;
 	  if(DEBUG>0) {
 	    cerr << "rid = "<<cur_chr<<" ("<<	  bcf_hdr_int2id(var_rdr->readers[i].header,BCF_DT_CTG,cur_chr)<<")"<<endl;
 	    cerr << "dp_chr = "<<dp_chr<<"    dp_pos = "<< dp_pos<<endl;
