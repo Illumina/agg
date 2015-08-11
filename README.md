@@ -20,19 +20,17 @@ It should be noted parts of the agg source code were taken directly from the exc
 ####Usage
 
 ```
-./agg 
-
-Program:	agg 145dfda (aggregation tool for multiple samples)
-Contact:	joconnell@illumina.com
+./agg
+Program:        agg 75c2488 (aggregation tool for multiple samples)
+Contact:        joconnell@illumina.com
 
 Copyright (c) 2015, Illumina, Inc. All rights reserved. See LICENSE.pdf for further details.
 
-Usage:	agg <command> [options]
+Usage:  agg <command> [options]
 
 Commands:
-	ingest		converts a gvcf into input appropriate for agg chunk
-	chunk		creates an agg chunk from agg ingest output
-	genotype	merges and genotypes agg chunks into a standard vcf/bcf
-
+        ingest1         converts gvcfs to input suitable for agg ingest2
+        ingest2         uses output files from ingest1 to build an agg chunk
+        genotype        genotypes and merges agg chunks into a multi-sample bcf/vcf
 ```
 
