@@ -41,7 +41,7 @@ Commands:
 #####Building an agg chunk
 This is a two stage process using the `agg ingest1` and `agg ingest2` commands.  The individual gvcfs are first pre-processed with `ingest1` and then merged into a chunk with `agg ingest2`.  In the future, we will aim to wrap these into one (faster) `ingest` command.
 
-######Pre-process gvcfs
+######ingest1: pre-process gvcfs
 You can do this to one gvcf like so:
 ```
 $ mkdir ingest1/
@@ -60,9 +60,16 @@ note you can replace `cat gvcfs.txt` with `find . -name '*.genome.vcf.gz` or sim
 
 These files are the input for `agg ingest2`, which builds a chunk, and is explained next. These intermediate files are rather large, but after building a chunk they can be disposed of.
 
-######Make a chunk
+######ingest2: merge temporary files into a chunk
+```
+$ agg ingest2
+```
 
 #####Genotyping and merging agg chunks
+```
+$ agg genotype -r chr1 chunk1.bcf chunk2.bcf -Ob -o merged.chr1.bcf
+$ bcftools index merged.bcf
+```
 
 ######Filtering
 The output from `agg` is very raw, containing all variants called in any sample, filtered or not. How exactly to filter this down to a high quality list of variants is a research topic in itself.  A simplistic first pass may involve:
