@@ -104,7 +104,7 @@ bcftools filter -e 'FMT/GQ<10' -S . -O u | bcftools view -i 'QUAL>=30 & AN>500' 
 ```
 This is very crude, typically one may also filter on extreme depth, allelic imbalance, divergence from HWE etc etc.
 
-#####Creating an site list
+#####Creating a site list
 For applications such as annotating variants in a rare disease study.  Often all that is needed is a site-only vcf with summary statistics of interest (such as allele frequency). stored in the INFO field.  This is straightforward to generate from the multi-sample bcf that was created in the previous section.
 ```
 bcftools view -G merged.flt.bcf -Oz -o merged.sites.vcf.gz
