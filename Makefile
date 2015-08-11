@@ -1,17 +1,17 @@
-#linker stuff
-HTSLIB = htslib-1.2.1/
-IFLAGS = -I$(HTSLIB)
-LFLAGS = -lz -lpthread -lm -ldl 
+all: agg
 
-ALLFLAGS = -std=c++0x  -Wno-write-strings  $(IFLAGS) 
-
-release: CFLAGS = -O3  $(ALLFLAGS) 
-release: all
+CFLAGS = -O2  $(ALLFLAGS) 
 
 debug: CFLAGS =  -pg -g -Wall $(ALLFLAGS) 
 debug: all 
 
-ALL=agg
+#linker stuff
+HTSDIR = htslib-1.2.1
+include $(HTSDIR)/htslib.mk
+HTSLIB = $(HTSDIR)/libhts.a
+IFLAGS = -I$(HTSDIR)
+LFLAGS = -lz -lpthread -lm -ldl 
+ALLFLAGS = -std=c++0x  -Wno-write-strings  $(IFLAGS) 
 
 ##objects libs etc
 version.h: 
@@ -19,24 +19,24 @@ version.h:
 	echo >> version.h
 utils.o: utils.cpp utils.h
 	$(CXX) $(CFLAGS) -c utils.cpp 
-agg_genotyper.o: agg_genotyper.cpp agg_genotyper.h $(HTSLIB)
+agg_genotyper.o: agg_genotyper.cpp agg_genotyper.h
 	$(CXX) $(CFLAGS) -c agg_genotyper.cpp  
-agg_utils.o: agg_utils.cpp agg.h htslib-1.2.1/
+agg_utils.o: agg_utils.cpp agg.h 
 	$(CXX) $(CFLAGS) -c $< 
-agg_ingest2.o: agg_ingest2.cpp agg.h htslib-1.2.1/
+agg_ingest2.o: agg_ingest2.cpp agg.h 
 	$(CXX) $(CFLAGS) -c $<  
-vcfmerge.o: vcfmerge.c htslib-1.2.1/
+vcfmerge.o: vcfmerge.c 
 	$(CXX) $(CFLAGS) -c $<  
-vcfnorm.o: vcfnorm.c htslib-1.2.1/
+vcfnorm.o: vcfnorm.c
 	$(CXX) $(CFLAGS) -c $<  
-vcmp.o: vcmp.c  htslib-1.2.1/
+vcmp.o: vcmp.c
 	$(CXX) $(CFLAGS) -c $<  
-agg_ingest1.o: agg_ingest1.cpp agg_ingest1.h agg.h htslib-1.2.1/
+agg_ingest1.o: agg_ingest1.cpp agg_ingest1.h agg.h
 	$(CXX) $(CFLAGS) -c $<  
 
 ##binaries
-agg: agg.cpp vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.h $(HTSLIB)/libhts.a
-	$(CXX) $(CFLAGS)  -o agg agg.cpp vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o $(HTSLIB)/libhts.a  $(LFLAGS) 
+agg: agg.cpp vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.h $(HTSLIB)
+	$(CXX) $(CFLAGS)  -o agg agg.cpp vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o $(HTSLIB) $(LFLAGS) 
 
 #housekeeping
 all:  $(ALL)
