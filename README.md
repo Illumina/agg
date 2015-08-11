@@ -4,9 +4,9 @@ Copyright (c) 2015, Illumina, Inc. All rights reserved. See LICENSE.pdf for furt
 
 ####Summary
 
-This tool implements a simple pipeline to merge Illumina gvcfs in a dynamic fashion. That is, not all gvcfs need to merged at once, new groups of samples can be added periodically.  It achieves this by storing sample variants in a standard bcf and storing depth/GQ information in an auxilliary file (.dpt - depth track). The variants and depth files make up an "agg chunk" and these chunks can then be merged on the fly, with the depth file allowing the union of variants to be genotyped across all samples.  Note, here "genotyping" simply means we can gauge the coverage at a variant position for samples that do not have that variant, allowing us to examine the evidence that this sample was homozygous reference at that location.
+This tool implements a basic pipeline to merge Illumina gvcfs in a dynamic fashion. That is, not all gvcfs need to merged at once, new groups of samples can be added periodically.  It achieves this by storing variants in a standard bcf and storing depth/GQ information in an auxilliary file (.dpt - depth track). The variants and depth files make up an "agg chunk" and these chunks can then be merged on the fly, with the depth file allowing the union of variants to be genotyped across all samples.  Note, here "genotyping" simply means we can gauge the coverage/GQ at a variant position for samples that do not have that variant, allowing us to examine the evidence that this sample was homozygous reference at that location.
 
-If you are working with relatively few gvcfs, then [gvcftools](https://github.com/sequencing/gvcftools) merge_variants is more appropriate.  The agg pipeline is more complex to run and really geared to 1000s of gvcfs.
+If you are working with relatively few gvcfs, then [gvcftools](https://github.com/sequencing/gvcftools) merge_variants is more appropriate.  The agg pipeline is more complex to run and is geared towards 1000s of gvcfs.
 
 ####Installation
 The only compilation dependency is [htslib](http://www.htslib.org/) which is included with the software.  
@@ -75,11 +75,12 @@ $ ls chunk_*.*
 ```
 
 #####Genotyping and merging agg chunks
+Once you have your chunks, life is easy.  Simply call `agg genotype` on any number of chunks to produce a typical multi-sample bcf/vcf that contains all the samples in all the chunks fully genotyped at all variants seen in all the chunks. 
 ```
 $ agg genotype -r chr1 chunk_00.bcf chunk_01.bcf chunk_02.bcf chunk_04.bcf -Ob -o merged.chr1.bcf
 $ bcftools index merged.bcf
 ```
-again `xargs` is your friend:
+Note you can (optionally) use the `-r` argument to specify chromosomes or smaller regions for easy parallelism, again `xargs` is your friend:
 ```
 $ for i in {1..22};do echo genotype -r chr${i} chunk_00.bcf chunk_01.bcf chunk_02.bcf chunk_04.bcf -Ob -o merged.chr${i}.bcf;done | xargs agg -n 10 -P 16
 ```
