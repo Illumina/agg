@@ -59,7 +59,7 @@ $ for i in `cat gvcfs.txt`;do out=$(basename ${i%.genome.vcf.gz});echo $i -o $ou
 ```
 note you can replace `cat gvcfs.txt` with `find . -name '*.genome.vcf.gz` or similar.
 
-These files are the input for `agg ingest2`, which builds a chunk, and is explained next. After building a chunk they can be disposed of.
+These files are the input for `agg ingest2`, which builds a chunk, and is explained next. These intermediate files are rather large, but after building a chunk they can be disposed of.
 
 ######Make a chunk
 
@@ -81,12 +81,12 @@ This is very crude, typically one may also filter on extreme depth, allelic imba
 #####Creating an site list
 For applications such as annotating variants in a rare disease study.  Often all that is needed is a site-only vcf with summary statistics of interest (such as allele frequency). stored in the INFO field.  This is straightforward to generate from the multi-sample bcf that was created in the previous section.
 ```
-bcftools view -G merged.bcf -Oz -o merged.sites.vcf.gz
+bcftools view -G merged.flt.bcf -Oz -o merged.sites.vcf.gz
 tabix merged.sites.vcf.gz
 ```
 We may also wish to add some custom stuff to the INFO field. For example, the hwe.c plugin included with this package will add the -log10(p-value) for Fisher's Exact test for divergence from Hardy-Weinberg Equilibrium, as well as the inbreeding coefficient.
 ```
-bcftools view  merged.bcf -Ou | bcftools +hwe | bcftools view -G -Oz -o merged.sites.vcf.gz
+bcftools view merged.flt.bcf -Ou | bcftools +hwe | bcftools view -G -Oz -o merged.sites.vcf.gz
 tabix merged.sites.vcf.gz
 ```
 
