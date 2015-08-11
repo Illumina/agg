@@ -223,6 +223,7 @@ int ingest_main(int argc,char **argv) {
   optind++;
 
   ingest1(argv[optind],output);
+  cerr << "Done."<<endl;
   return(0);
 }
 

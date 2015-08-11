@@ -135,10 +135,6 @@ depthMerger::~depthMerger() {
 int depthMerger::syncBuffer() {
   int buf_size=1000;//maximum number of intervals to buffer.
 
-  // omp_set_dynamic(0);     // Explicitly disable dynamic teams
-  //  omp_set_num_threads(min(nsample,16));
-  // #pragma omp parallel for
-
   for(int i=0;i<nsample;i++) {
     dp[i]=bcf_int32_missing; //default.
     gq[i]=bcf_int32_missing; //default.

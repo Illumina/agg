@@ -199,22 +199,25 @@ int aggReader::setDepth() {
       int   var_len=b-a+1;
       float num=0;
       int pos=0;
+      int min_gq = -1;
       while(it1!=dp_buf[i].end() && it1->stop < a) 
 	it1++;
-      //      	if(var_start==83249)      cerr << " Typing "    <<a+1<<"-"<<b+1<<endl;
       while(it1!=dp_buf[i].end() && it1->start <= b) {
+	//dp
 	if(it1->start <= a && it1->stop >= b) 
 	  num += it1->depth * var_len;	
 	else if(it1->start<=a)
 	  num += (it1->stop - a + 1)*it1->depth;
 	else if(it1->stop>=b)
 	  num += (b - it1->start + 1)*it1->depth;
-	//	if(var_start==83249)      cerr << i << " "<<it1->start+1<<","<<it1->stop+1<<" "<<it1->depth<<" "<<num<<endl;
+	//gq.  simply finding the mingq across the region.
+	if( (a<=it1->start && b>=it1->start) || (a<=it1->stop && b>=it1->stop) )
+	  if(min_gq==-1 || it1->gq < min_gq)
+	    min_gq = it1->gq;
 	it1++;
       }
       dp[i] = (int)(round(num/(float)var_len));
-      gq[i] = bcf_int32_missing;//i give up.
-      //            if(var_start==83249)      cerr << i << " "<<num << " = "<<dp[i]<<endl ;
+      gq[i] = min_gq;
     }
   }
   if(DEBUG>1){
@@ -222,13 +225,11 @@ int aggReader::setDepth() {
     cerr <<endl;
   }
 
-  //    assert(var_start<83249);
   return(0);
 }
 
 int aggReader::next() {
   int n_allele;
-  //  assert(var_start<61098);
   if (bcf_sr_next_line (var_rdr)) {
     vr->clear();
     //get variants for each reader.
