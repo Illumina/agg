@@ -78,11 +78,17 @@ $ ls chunk_*.*
 Once you have your chunks, life is easy.  Simply call `agg genotype` on any number of chunks to produce a typical multi-sample bcf/vcf that contains all the samples in all the chunks fully genotyped at all variants seen in all the chunks. 
 ```
 $ agg genotype -r chr1 chunk_00.bcf chunk_01.bcf chunk_02.bcf chunk_04.bcf -Ob -o merged.chr1.bcf
-$ bcftools index merged.bcf
+$ bcftools index merged.chr1.bcf
 ```
 Note you can (optionally) use the `-r` argument to specify chromosomes or smaller regions for easy parallelism, again `xargs` is your friend:
 ```
+#genotype autosomes separately
 $ for i in {1..22};do echo genotype -r chr${i} chunk_00.bcf chunk_01.bcf chunk_02.bcf chunk_04.bcf -Ob -o merged.chr${i}.bcf;done | xargs agg -n 10 -P 16
+
+#concatenate autosomes into one big file if desired
+$ for i in {1..22};do echo merged.chr${i}.bcf;done > files_to_concat.txt
+$ bcftools concat -f files_to_concat.txt -Ob -o merged.bcf
+bcftools index merged.bcf
 ```
 
 ######Filtering
