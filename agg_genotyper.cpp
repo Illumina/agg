@@ -262,6 +262,7 @@ int aggReader::next() {
 	else {
 	  int l1 = strlen(line[i]->d.allele[0]);
 	  int l2 = strlen(line[i]->d.allele[1]);
+	  if(DEBUG>1) cerr << "(l1,l2) = "<< l1 << " " << l2 << endl;
 	  if(l1==1 && l2==1) {
 	    var_stop=var_start;
 	    var_type=0;
@@ -270,7 +271,7 @@ int aggReader::next() {
 	    var_stop = var_start + l1 - 1;
 	    var_type=2;
 	  }
-	  else if(l2<l1) {//insertion. check for coverage at +1 position. is this sensible??
+	  else if(l1<l2) {//insertion. check for coverage at +1 position. is this sensible??
 	    var_stop = var_start + 1;	    
 	    var_type=1;
 	  }
