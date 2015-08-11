@@ -38,3 +38,42 @@ Commands:
         genotype        genotypes and merges agg chunks into a multi-sample bcf/vcf
 ```
 
+#####Building an agg chunk
+This is a two stage process using the `agg ingest1` and `agg ingest2` commands.  The individual gvcfs are first pre-processed with `ingest1` and then merged into a chunk with `agg ingest2`.  In the future, we will aim to wrap these into one (faster) `ingest` command.
+
+######Pre-process gvcfs
+You can do this to one gvcf like so:
+```
+$ mkdir ingest1/
+$ agg ingest1 sample1.genome.vcf.gz -o ingest1/sample1
+Input: sample1.genome.vcf.gz    Output: ingest1/sample1
+depth: ingest1/sample1.dpt
+variants: ingest1/sample1.bcf
+
+```
+this takes ~10 minutes.
+
+In practice, we have 100s to 1000s of these and want to automate things. Say you have a 16 core node and want to build an agg chunk from 500 gvcfs listed in `gvcfs.txt`.  We can leverage the multiple CPUs using unix `xargs`.
+```
+$ for i in `cat gvcfs.txt`;do out=$(basename ${i%.genome.vcf.gz});echo $i -o $out;done | xargs -p 16 -n 3 agg
+```
+note you can replace `cat gvcfs.txt` with `find . -name '*.genome.vcf.gz` or similar.
+
+These files are the input for `agg ingest2`, which builds a chunk, and is explained next. After building a chunk they can be disposed of.
+
+######Make a chunk
+
+#####Genotyping and merging agg chunks
+
+#####Creating an site list
+For applications such as annotating variants in a rare disease study.  Often all that is needed is a site-only vcf with summary statistics of interest (such as allele frequency). stored in the INFO field.  This is straightforward to generate from the multi-sample bcf that was created in the previous section.
+```
+bcftools view -G merged.bcf -Oz -o merged.sites.vcf.gz
+tabix merged.sites.vcf.gz
+```
+We may also wish to add some custom stuff to the INFO field. For example, the hwe.c plugin included with this package will add the -log10(p-value) for Fisher's Exact test for divergence from Hardy-Weinberg Equilibrium, as well as the inbreeding coefficient.
+```
+bcftools view  merged.bcf -Ou | bcftools +hwe | bcftools view -G -Oz -o merged.sites.vcf.gz
+tabix merged.sites.vcf.gz
+```
+
