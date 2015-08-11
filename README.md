@@ -49,7 +49,6 @@ $ agg ingest1 sample1.genome.vcf.gz -o ingest1/sample1
 Input: sample1.genome.vcf.gz    Output: ingest1/sample1
 depth: ingest1/sample1.dpt
 variants: ingest1/sample1.bcf
-
 ```
 this takes ~10 minutes.
 
