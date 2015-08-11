@@ -50,6 +50,7 @@ class aggReader {
   bcf_hdr_t *dp_hdr;
   bcf_srs_t *dp_rdr;    
   vector<bcf1_t *> dp_line;       //dp line
+  void annotate_line();
 
   //handles the variants
   bcf1_t *out_line;//output line

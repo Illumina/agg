@@ -2,9 +2,16 @@
 
 #define DEBUG 0
 
-int fillHeader(bcf_hdr_t *hdr,  bcf_hdr_t *src_hdr) {//fills in the standard stuff for an agg header.
+int fillHeader(bcf_hdr_t *hdr) {//fills in the standard stuff for an agg header.
 
   bcf_hdr_append(hdr, "##source=agg");
+  bcf_hdr_append(hdr, "##INFO=<ID=PF,Number=1,Type=Float,Description=\"proport of genotypes containing an ALT that passed the original single sample gvcf filter\">");
+  bcf_hdr_append(hdr, "##INFO=<ID=GN,Number=G,Type=Integer,Description=\"count of each genotype.\">"); //todo.
+  bcf_hdr_append(hdr, "##INFO=<ID=AD,Number=R,Type=Integer,Description=\"sum of allele depths for ALL individuals\">"); //todo.
+  bcf_hdr_append(hdr, "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"sum of depth  across all samples\">");
+  bcf_hdr_append(hdr, "##INFO=<ID=AC,Number=A,Type=Integer,Description=\"Allele count in genotypes\">");
+  bcf_hdr_append(hdr, "##INFO=<ID=AN,Number=1,Type=Integer,Description=\"Total number of alleles in called genotypes\">");
+
   return(0);
 }
 
@@ -241,7 +248,8 @@ int aggReader::next() {
 	if(line[i]->rid != cur_chr || line_count==0) {
 	  cur_chr = line[i]->rid;
 	  while(dp_chr!=cur_chr)   	    moveDepthForward();
-	  cerr <<line_count<<" variants genotyped." <<endl;
+	  if(line_count>0)
+	    cerr <<line_count<<" variants genotyped." <<endl;
 	  cerr << "Genotyping contig " << bcf_hdr_int2id(var_rdr->readers[i].header,BCF_DT_CTG,cur_chr)<<endl;
 	  if(DEBUG>0) {
 	    cerr << "rid = "<<cur_chr<<" ("<<	  bcf_hdr_int2id(var_rdr->readers[i].header,BCF_DT_CTG,cur_chr)<<")"<<endl;
@@ -356,6 +364,55 @@ int aggReader::next() {
   return(0);//finished  
 }
 
+//adds sum(DP),sum(AD),mean(PF),AC,AN to INFO.
+void aggReader::annotate_line() {
+  int32_t ac=0,an=0,sum_dp=0;
+  int32_t sum_ad[2] = {0,0};
+  float pf = 0.;
+  float nalt=0;// number of genotypes containing an ALT allele.
+  for(int i=0;i<nsample;i++) {
+    //allele counts
+    if(vr->gt[i*2]!=bcf_gt_missing) {
+      ac+=bcf_gt_allele(vr->gt[i*2]);
+      an++;
+    }
+    if(vr->gt[i*2+1]!=bcf_gt_missing) {
+      ac+=bcf_gt_allele(vr->gt[i*2+1]);
+      an++;
+    }
+
+    //depth
+    if(vr->dp[i]!=bcf_int32_missing) sum_dp+=vr->dp[i];
+
+    //ad
+    if(vr->gt[i*2+1]!=bcf_gt_missing && vr->gt[i*2]!=bcf_gt_missing) {
+      //hom
+      if(vr->ad[i*2]!=bcf_int32_missing)
+	sum_ad[0]+=vr->ad[i*2];
+      else
+	sum_ad[0]+=vr->dp[i];
+      //alt
+      if(bcf_gt_allele(vr->gt[i*2])>0 || bcf_gt_allele(vr->gt[i*2+1])>0)
+	sum_ad[1] += vr->ad[i*2+1];
+    }
+  
+    //pf
+    if(vr->gt[i*2+1]!=bcf_gt_missing && vr->gt[i*2]!=bcf_gt_missing)  {
+      if(bcf_gt_allele(vr->gt[i*2])>0 || bcf_gt_allele(vr->gt[i*2+1])>0) {
+	pf+=vr->pf[i];
+	nalt++;
+      }
+    }
+  }
+  pf/=nalt;
+  bcf_update_info_int32(out_hdr, out_line, "AN", &an, 1);
+  bcf_update_info_int32(out_hdr, out_line, "AC", &ac, 1);
+  bcf_update_info_float(out_hdr, out_line, "PF", &pf, 1);
+  bcf_update_info_int32(out_hdr, out_line, "AD", sum_ad, 2);
+  bcf_update_info_int32(out_hdr, out_line, "DP", &sum_dp, 1);
+
+}
+
 int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads ) {
   int nwritten=0;
   string mode = "w" + (string) output_type;
@@ -388,11 +445,12 @@ int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads 
       bcf_hdr_add_sample(out_hdr,sample_name.c_str());
     }
   }
-  //  fillHeader(out_hdr,var_rdr->readers[0].header);
+  fillHeader(out_hdr);
   bcf_hdr_combine(out_hdr, var_rdr->readers[0].header);
   bcf_hdr_write(out_fh, out_hdr);
 
   while(next()) {
+    annotate_line();
     bcf_write1(out_fh, out_hdr, out_line) ;
     bcf_clear1(out_line) ;
     nwritten++;
