@@ -65,6 +65,17 @@ These files are the input for `agg ingest2`, which builds a chunk, and is explai
 
 #####Genotyping and merging agg chunks
 
+######Filtering
+The output from `agg` is very raw, containing all variants called in any sample, filtered or not. How exactly to filter this down to a high quality list of variants is a research topic in itself.  A basic first pass may involve:
+
+*set genotypes where GQ<10 to missing
+*remove sites where very few genotypes are called based on the previous metric
+*remove sites where QUAL<30
+```
+bcftools filter -e 'FMT/GQ<10' -S . -O u | bcftools view -i 'QUAL>=30 & AN>500' -Ob -o merged.flt.bcf
+```
+This is very crude, typically one may also filter on extreme depth, allelic imbalance, divergence from HWE etc etc.
+
 #####Creating an site list
 For applications such as annotating variants in a rare disease study.  Often all that is needed is a site-only vcf with summary statistics of interest (such as allele frequency). stored in the INFO field.  This is straightforward to generate from the multi-sample bcf that was created in the previous section.
 ```
