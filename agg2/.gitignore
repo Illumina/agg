@@ -1,0 +1,13 @@
+*.o
+*~
+canon
+agg
+mergeBlocks
+version.h
+gvcftools-0.16/
+bcftools-1.2
+gvcftools-0.16.tar.gz
+gvcftools-0.16
+chunker
+htslib-1.2.1
+vt-0.57/
