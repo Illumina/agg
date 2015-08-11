@@ -54,16 +54,16 @@ Done.
 ```
 this takes ~10 minutes.
 
-In practice, we have 100s to 1000s of gvcfs and want to automate things. Say you have a 16 core node and want to build an agg chunk from 500 gvcfs listed in `gvcfs.txt`.  We can leverage the multiple CPUs using unix `xargs`.
+In practice, we have 100s to 1000s of gvcfs and want to automate things. Say you have a 16 core node and want to build an agg chunk from 500 gvcfs listed in `gvcfs.txt`.  We can leverage the multiple CPUs using the `xargs` command.
 ```
 $ for i in `cat gvcfs.txt`;do out=$(basename ${i%.genome.vcf.gz});echo ingest1 $i -o ingest1/${out};done | xargs -p 16 -n 4 agg
 ```
-note you can replace `cat gvcfs.txt` with `find . -name '*.genome.vcf.gz` or similar.
+note you can replace `cat gvcfs.txt` with `find . -name '*.genome.vcf.gz'` or similar.
 
 These files are the input for `agg ingest2`, which builds a chunk and is explained next. These intermediate files are rather large (1GB-2GB per sample), but after building a chunk they can be disposed of. You may wish to store them on local scratch space if it is available.
 
 ######ingest2: merge temporary files into a chunk
-Let's roll how intermediate files into five separate agg chunks. We will use `xargs` to leverage multiple cores again.
+Let's roll these intermediate files into five separate agg chunks (100 samples per chunk). We will use `xargs` to leverage multiple cores again.
 ```
 $ find ingest1/ -name '*.bcf' > ingest1.txt ##get bcfs from ingest1 step
 $ split -d -l 100 ingest1.txt chunk_ #splits the file into 5 groups of 100
@@ -75,7 +75,7 @@ $ ls chunk_*.*
 ```
 
 #####Genotyping and merging agg chunks
-Once you have your chunks, life is easy.  Simply call `agg genotype` on any number of chunks to produce a typical multi-sample bcf/vcf that contains all the samples in all the chunks fully genotyped at all variants seen in all the chunks. 
+Once you have your chunks, life is easy.  Simply call `agg genotype` on any number of chunks to produce a typical multi-sample bcf/vcf that contains all the samples in all the chunks genotyped at all variants seen across the chunks. 
 ```
 $ agg genotype -r chr1 chunk_00.bcf chunk_01.bcf chunk_02.bcf chunk_04.bcf -Ob -o merged.chr1.bcf
 $ bcftools index merged.chr1.bcf
@@ -92,7 +92,7 @@ bcftools index merged.bcf
 ```
 
 ######Filtering
-The output from `agg` is very raw, containing all variants called in any sample, filtered or not. How exactly to filter this down to a high quality list of variants is a research topic in itself.  A simplistic first pass may involve:
+The output from `agg` is very raw, containing all variants called in any sample, where they passed filtered in the single sample gvcfs or not. How exactly to filter these down to a high quality list of variants is a research topic in itself.  A simplistic first pass may involve:
 
 * set genotypes where GQ<10 to missing
 * remove sites where only 50% of genotypes are called (after GQ<10 removal)
@@ -105,7 +105,7 @@ bcftools filter -e 'FMT/GQ<10' -S . -O u | bcftools view -i 'QUAL>=30 & AN>500' 
 This is very crude, typically one may also filter on extreme depth, allelic imbalance, divergence from HWE etc etc.
 
 #####Creating a site list
-For applications such as annotating variants in a rare disease study.  Often all that is needed is a site-only vcf with summary statistics of interest (such as allele frequency). stored in the INFO field.  This is straightforward to generate from the multi-sample bcf that was created in the previous section.
+For applications such as annotating variants in an individual with a rare disease.  Often all that is needed is a site-only vcf with summary statistics of interest (such as allele frequency) stored in the INFO field.  This is straightforward to generate from the multi-sample bcf that was created in the previous section.
 ```
 bcftools view -G merged.flt.bcf -Oz -o merged.sites.vcf.gz
 tabix merged.sites.vcf.gz
