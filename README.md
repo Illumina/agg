@@ -107,12 +107,12 @@ This is very crude, typically one may also filter on extreme depth, allelic imba
 #####Creating a site list
 For applications such as annotating variants in an individual with a rare disease.  Often all that is needed is a site-only vcf with summary statistics of interest (such as allele frequency) stored in the INFO field.  This is straightforward to generate from the multi-sample bcf that was created in the previous section.
 ```
-bcftools view -G merged.flt.bcf -Oz -o merged.sites.vcf.gz
+bcftools view -G merged.flt.bcf -Ou |  bcftools +fill-AN-AC | bcftools view -Oz -o merged.sites.vcf.gz
 tabix merged.sites.vcf.gz
 ```
 We may also wish to add some custom stuff to the INFO field. For example, the hwe.c plugin included with this package will add the -log10(p-value) for Fisher's Exact test for divergence from Hardy-Weinberg Equilibrium, as well as the inbreeding coefficient.
 ```
-bcftools view merged.flt.bcf -Ou | bcftools +hwe | bcftools view -G -Oz -o merged.sites.vcf.gz
+bcftools view merged.flt.bcf -Ou | bcftools +fill-AN-AC | bcftools +hwe | bcftools view -G -Oz -o merged.sites.vcf.gz
 tabix merged.sites.vcf.gz
 ```
 
