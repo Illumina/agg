@@ -1,4 +1,4 @@
-Note: agg2 is deprecated. I am just leaving this here for posterity.
+**Note: agg2 is deprecated. I am just leaving this here for posterity.**
 
 agg2: a utility for aggregating gvcfs
 
