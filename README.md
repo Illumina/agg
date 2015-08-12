@@ -56,7 +56,7 @@ this takes ~10 minutes.
 
 In practice, we have 100s to 1000s of gvcfs and want to automate things. Say you have a 16 core node and want to build an agg chunk from 500 gvcfs listed in `gvcfs.txt`.  We can leverage the multiple CPUs using the `xargs` command.
 ```
-$ for i in `cat gvcfs.txt`;do out=$(basename ${i%.genome.vcf.gz});echo ingest1 $i -o ingest1/${out};done | xargs -p 16 -n 4 agg
+$ for i in `cat gvcfs.txt`;do out=$(basename ${i%.genome.vcf.gz});echo ingest1 $i -o ingest1/${out};done | xargs -P 16 -n 4 agg
 ```
 note you can replace `cat gvcfs.txt` with `find . -name '*.genome.vcf.gz'` or similar.
 
