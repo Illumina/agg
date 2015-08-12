@@ -9,14 +9,19 @@
 #include <vector>
 #include <deque>
 #include <string>
-//#include <omp.h>
 #include "string.h"
+
+#include "utils.h"
+
 extern "C" {
 #include "htslib/synced_bcf_reader.h"
 #include "htslib/vcf.h"
 #include "htslib/hts.h"
+
+//this is a dummy definition for a function pilfered directly from bcftools.
+int main_vcfmerge(int argc, char *argv[],char *file_list, char *output_fname,int nthreads);
 }
-#include "utils.h"
+
 
 using namespace std;
 
@@ -273,8 +278,6 @@ static void usage(){
   exit(1);
 }
 
-//this is a dummy definition for a function pilfered directly from bcftools.
-int main_vcfmerge(int argc, char *argv[],char *file_list, char *output_fname,int nthreads);
 
 int merge_main(int argc,char **argv) {
 

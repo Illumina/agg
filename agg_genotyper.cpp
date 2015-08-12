@@ -437,7 +437,7 @@ int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads 
       if ( bcf_hdr_id2int(out_hdr, BCF_DT_SAMPLE, sample_name.c_str())!=-1 )
 	if(force_samples) {
 	  cerr << "Warning duplicate sample found.\t" << sample_name;
-	  sample_name += ":R"+to_string(repeat_count++);
+	  sample_name += ":R"+to_string(static_cast<long long>(repeat_count++));
 	  cerr << " -> "<< sample_name<<endl;
 	}
 	else

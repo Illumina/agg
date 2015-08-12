@@ -36,12 +36,12 @@ THE SOFTWARE.  */
 #include "bcftools.h"
 #include "vcmp.h"
 
-extern "C" {
+
 #include "htslib/vcf.h"
 #include "htslib/synced_bcf_reader.h"
 #include "htslib/vcfutils.h"
 #include "htslib/khash.h"
-}
+
 
 
 
