@@ -92,10 +92,10 @@ bcftools index merged.bcf
 ```
 
 ######Filtering
-The output from `agg` is very raw, containing all variants called in any sample, where they passed filtered in the single sample gvcfs or not. How exactly to filter these down to a high quality list of variants is a research topic in itself.  A simplistic first pass may involve:
+The output from `agg` is very raw, containing all variants called in any sample, whether they passed filter in the single sample gvcfs or not. How exactly to filter these down to a high quality list of variants is a research topic in itself.  A simplistic first pass may involve:
 
 * set genotypes where GQ<10 to missing
-* remove sites where only 50% of genotypes are called (after GQ<10 removal)
+* remove sites where < 90% of genotypes are called (after GQ<10 removal)
 * remove sites where QUAL<30
 
 this can be achieved by:
