@@ -1,4 +1,5 @@
-
+CC=gcc
+CXX=g++
 
 all: agg
 

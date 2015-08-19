@@ -1,6 +1,6 @@
 #include "agg_genotyper.h"
 
-#define DEBUG 0
+#define DEBUG 2
 
 int fillHeader(bcf_hdr_t *hdr) {//fills in the standard stuff for an agg header.
 
@@ -307,11 +307,31 @@ int aggReader::next() {
       int32_t *ad=&(vr->ad[n_allele*offset]);
       bool has_line=bcf_sr_has_line(var_rdr,i);
       int ntmp = bcf_hdr_nsamples(hdr);
-
+      cerr<<"ntmp ="<<ntmp<<endl;
       if(has_line) {
 	int nval = 2*ntmp;
-	bcf_get_genotypes(hdr, line[i], &gt, &nval);
-	nval = n_allele*ntmp;
+	int ngt_read = bcf_get_genotypes(hdr, line[i], &gt, &nval);
+	if(ngt_read!=(2*ntmp) && ngt_read!=ntmp)
+	  die("incorrect ploidy at "+to_string(line[i]->pos+1)+" ngt_read="+to_string(ngt_read));
+
+	if(ngt_read==ntmp) {//this is a hack to deal with sites where everyone has been made haploid.
+	  int *work =  new int[ntmp];
+	  cerr << "WARNING: position "<< line[i]->pos+1 <<" had an all-haploid site, this can be caused by gvcf hemizygous rules"<<endl;
+	  for(int j=0;j<ntmp;j++)  
+	    work[j]=gt[j];
+	  for(int j=0;j<ntmp;j++){
+	    if(work[j]!=bcf_gt_missing) {
+	      gt[2*j]=bcf_gt_unphased(0);
+	      gt[2*j+1]=work[j];
+	    }
+	    else {
+	      gt[2*j]=bcf_gt_missing;
+	      gt[2*j+1]=bcf_gt_missing;
+	    }
+	  }
+	  delete[] work;
+	}		       
+
 	bcf_get_format_int32(hdr, line[i], "AD", &ad, &nval);
 
 	nval=ntmp;
@@ -332,6 +352,7 @@ int aggReader::next() {
 
       for(int j=0;j<ntmp;j++) {
 	if(!has_line || (gt[j*2]==bcf_gt_missing && gt[j*2+1]==bcf_gt_missing) )  {//missing vcf entry. fill from dp_buf
+	  cerr << "homref_sample_"<<i<<"_"<<j<<" ";
 	  dp1[j]=dp[j];
 	  gq1[j]=gq[j];
 	  if(gq[j]>0||dp[j]>0) {
@@ -343,8 +364,10 @@ int aggReader::next() {
 	    gt[j*2+1]=bcf_gt_missing;	      
 	  }
 	}
-	else if(var_type!=0) //not a SNP? fill DP from AD
+	else if(var_type!=0) {//not a SNP? fill DP from AD
 	  dp1[j] = ad[j*2]+ad[j*2+1];
+	  cerr << "alt_sample_"<<i<<"_"<<j;
+	}
       }
       offset+=ntmp;
     }
@@ -415,6 +438,7 @@ void aggReader::annotate_line() {
 
 int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads ) {
   int nwritten=0;
+  if(!output_type) output_type="v";
   string mode = "w" + (string) output_type;
   htsFile *out_fh  = hts_open(output_file ? output_file : "-", mode.c_str());
   cerr << "Writing output to "<<output_file<<" "<<mode<<endl;

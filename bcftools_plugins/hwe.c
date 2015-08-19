@@ -35,15 +35,16 @@
 
 bcf_hdr_t *in_hdr, *out_hdr;
 int *gt = NULL, ngt = 0,n;
-int count[3];
+int32_t count[3];
 double *p;
 
-float hwe(bcf1_t *rec, bcf_hdr_t *hdr) {
+float hwe(bcf1_t *rec) {
   assert(rec->n_allele==2);
   float fpval,af;//alternate allele frequency
   float F;//inbreeding coefficeint.
   int an=0,i;
   int ret = bcf_get_genotypes(in_hdr, rec, &gt, &ngt);
+  assert(ret==2*n);
   for(i=0;i<3;i++) count[i]=0;
 
   if(ret!=2*n)
@@ -51,10 +52,17 @@ float hwe(bcf1_t *rec, bcf_hdr_t *hdr) {
 
   for(i=0;i<n;i++) {
     if(gt[i*2]!=bcf_gt_missing && gt[i*2+1]!=bcf_gt_missing) {
-      if(gt[i*2+1]<0) //handles  hemis
-      	count[bcf_gt_allele(gt[i*2])]++;
+      int g = bcf_gt_allele(gt[i*2]);
+      if(gt[i*2+1]>0)
+	g+=bcf_gt_allele(gt[i*2+1]);
       else
-	count[bcf_gt_allele(gt[i*2]) + bcf_gt_allele(gt[i*2+1])]++;
+	g*=2;
+      //      fprintf(stderr,"g=%d/%d\n",bcf_gt_allele(gt[i*2]),bcf_gt_allele(gt[i*2+1]));
+      if(!(g>=0&&g<3)) {
+	fprintf(stderr,"bad genotype at pos %d sample %d g=%d/%d\n",rec->pos+1,i,bcf_gt_allele(gt[i*2]),bcf_gt_allele(gt[i*2+1]));
+	exit(1);
+      }
+      count[g]++;
       an++;
     }
   }
@@ -64,7 +72,7 @@ float hwe(bcf1_t *rec, bcf_hdr_t *hdr) {
 
   af = (float)( count[1] + 2*count[2] ) / (float)(2. * an);
   F = 1. -  ((float)count[1]) / (an * 2. * af * (1-af) );
-  bcf_update_info_float(hdr, rec, "F", &F, 1);
+  bcf_update_info_float(out_hdr, rec, "F", &F, 1);
 
   /* fprintf(stderr,"pos=%d\n",rec->pos+1); */
   /* fprintf(stderr,"%d %d %d\n",count[0],count[1],count[2]); */
@@ -113,8 +121,9 @@ float hwe(bcf1_t *rec, bcf_hdr_t *hdr) {
     pval=1000.; //stops Inf values.
   //  fprintf(stderr,"pval=%f\n",pval);
   fpval=pval;
-  bcf_update_info_float(hdr, rec, "HWE", &fpval, 1);
-  return(0);
+  bcf_update_info_float(out_hdr, rec, "HWE", &fpval, 1);
+  bcf_update_info_int32(out_hdr, rec, "GN", count, 3);
+  return(pval);
 }
 
 const char *about(void)
@@ -126,17 +135,20 @@ int init(int argc, char **argv, bcf_hdr_t *in, bcf_hdr_t *out)
 {
   in_hdr  = in;
   out_hdr = out;
+  bcf_hdr_append(out_hdr, "##INFO=<ID=GN,Number=G,Type=Integer,Description=\"genotype counts\">");
   bcf_hdr_append(out_hdr, "##INFO=<ID=HWE,Number=1,Type=Float,Description=\"-log10(pvalue) for HWE exact test\">");
   bcf_hdr_append(out_hdr, "##INFO=<ID=F,Number=1,Type=Float,Description=\"inbreeding coefficient\">");
   n =  bcf_hdr_nsamples(in_hdr);
-  p = (double *)malloc(n*sizeof(double));
+  ngt=2*n;
+  p = (double *)malloc(ngt*sizeof(double));
+  gt = (int *)malloc(2*n*sizeof(int));
   return 0;
 }
 
 bcf1_t *process(bcf1_t *rec)
 {
   if(rec->n_allele==2) {
-    hwe(rec,out_hdr);
+    hwe(rec);
   }
   
   return rec;
