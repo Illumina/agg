@@ -56,7 +56,11 @@ this takes ~10 minutes.
 
 In practice, we have 100s to 1000s of gvcfs and want to automate things. Say you have a 16 core node and want to build an agg chunk from 500 gvcfs listed in `gvcfs.txt`.  We can leverage the multiple CPUs using the `xargs` command.
 ```
-$ for i in `cat gvcfs.txt`;do out=$(basename ${i%.genome.vcf.gz});echo ingest1 $i -o ingest1/${out};done | xargs -P 16 -l agg
+$ for i in `cat gvcfs.txt`;
+  do 
+     out=$(basename ${i%.genome.vcf.gz});
+     echo ingest1 $i -o ingest1/${out};
+  done | xargs -P 16 -l agg
 ```
 note you can replace `cat gvcfs.txt` with `find . -name '*.genome.vcf.gz'` or similar.
 
@@ -65,8 +69,10 @@ These files are the input for `agg ingest2`, which builds a chunk and is explain
 ######ingest2: merge temporary files into a chunk
 Let's roll these intermediate files into five separate agg chunks (100 samples per chunk). We will use `xargs` to leverage multiple cores again.
 ```
-$ find ingest1/ -name '*.bcf' > ingest1.txt ##get bcfs from ingest1 step
-$ split -d -l 100 ingest1.txt chunk_ #splits the file into 5 groups of 100
+##get bcfs from ingest1 step
+$ find ingest1/ -name '*.bcf' > ingest1.txt 
+#splits the file into 5 groups of 100
+$ split -d -l 100 ingest1.txt chunk_ 
 $ ls chunk_*
 chunk_00  chunk_01  chunk_02  chunk_03  chunk_04
 $ for i in chunk_*;do echo ingest2 -l $i -@4 -o $i;done | xargs -l -P 16
@@ -77,13 +83,16 @@ $ ls chunk_*.*
 #####Genotyping and merging agg chunks
 Once you have your chunks, life is easy.  Simply call `agg genotype` on any number of chunks to produce a typical multi-sample bcf/vcf that contains all the samples in all the chunks genotyped at all variants seen across the chunks. 
 ```
-$ agg genotype -r chr1 chunk_00.bcf chunk_01.bcf chunk_02.bcf chunk_04.bcf -Ob -o merged.chr1.bcf
+$ agg genotype -r chr1 chunk_*.bcf -Ob -o merged.chr1.bcf
 $ bcftools index merged.chr1.bcf
 ```
 Note you can (optionally) use the `-r` argument to specify chromosomes or smaller regions for easy parallelism, again `xargs` is your friend:
 ```
 #genotype autosomes separately
-$ for i in {1..22};do echo genotype -r chr${i} chunk_00.bcf chunk_01.bcf chunk_02.bcf chunk_04.bcf -Ob -o merged.chr${i}.bcf;done | xargs agg -l -P 16
+$ for i in {1..22};
+  do 
+     echo genotype -r chr${i} chunk_*.bcf -Ob -o merged.chr${i}.bcf;
+  done | xargs agg -l -P 16
 
 #concatenate autosomes into one big file if desired
 $ for i in {1..22};do echo merged.chr${i}.bcf;done > files_to_concat.txt
