@@ -1,6 +1,6 @@
 #include "agg_genotyper.h"
 
-#define DEBUG 2
+#define DEBUG 0
 
 int fillHeader(bcf_hdr_t *hdr) {//fills in the standard stuff for an agg header.
 
@@ -307,7 +307,6 @@ int aggReader::next() {
       int32_t *ad=&(vr->ad[n_allele*offset]);
       bool has_line=bcf_sr_has_line(var_rdr,i);
       int ntmp = bcf_hdr_nsamples(hdr);
-      cerr<<"ntmp ="<<ntmp<<endl;
       if(has_line) {
 	int nval = 2*ntmp;
 	int ngt_read = bcf_get_genotypes(hdr, line[i], &gt, &nval);
@@ -352,7 +351,6 @@ int aggReader::next() {
 
       for(int j=0;j<ntmp;j++) {
 	if(!has_line || (gt[j*2]==bcf_gt_missing && gt[j*2+1]==bcf_gt_missing) )  {//missing vcf entry. fill from dp_buf
-	  cerr << "homref_sample_"<<i<<"_"<<j<<" ";
 	  dp1[j]=dp[j];
 	  gq1[j]=gq[j];
 	  if(gq[j]>0||dp[j]>0) {
@@ -366,7 +364,6 @@ int aggReader::next() {
 	}
 	else if(var_type!=0) {//not a SNP? fill DP from AD
 	  dp1[j] = ad[j*2]+ad[j*2+1];
-	  cerr << "alt_sample_"<<i<<"_"<<j;
 	}
       }
       offset+=ntmp;

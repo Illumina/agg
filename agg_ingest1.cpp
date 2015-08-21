@@ -110,7 +110,7 @@ int ingest1(const char *input,const char*output) {
   assert(  bcf_hdr_append(hdr,"##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">") == 0);
 
   //here we add FORMAT/PF. which is the pass filter flag for alts.
-  assert(  bcf_hdr_append(hdr,"##FORMAT=<ID=PF,Number=1,Type=Integer,Description=\"variant was PASS filter in original sample gvcf\">") == 0);
+  assert(  bcf_hdr_append(hdr,"##FORMAT=<ID=PF,Number=A,Type=Integer,Description=\"variant was PASS filter in original sample gvcf\">") == 0);
 
 
 

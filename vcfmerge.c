@@ -1548,6 +1548,8 @@ void merge_line(args_t *args)
 
     merge_chrom2qual(args, out);
     merge_filter(args, out);
+    bcf_update_filter(args->out_hdr,out,NULL,0);//just wipe the filters.
+
     merge_info(args, out);
     merge_format(args, out);
 
