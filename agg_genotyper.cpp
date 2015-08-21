@@ -252,7 +252,7 @@ int aggReader::setDepth() {
       gq[i] = min_gq;
     }
   }
-  cerr<<endl;
+
   if(DEBUG>1){
     for(int i=0;i<nsample;i++) cerr << dp[i]<<":"<<gq[i]<<"\t";
     cerr <<endl;
