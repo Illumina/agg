@@ -68,6 +68,24 @@ aggReader::aggReader(const vector<string>& input_files,const string &region) {
   for(int i=0;i<nreader;i++)    tmp[i]=input_files[i];
   var_rdr = vcf_ropen(tmp,region);
 
+
+  if(region.find(":")<region.size()) {//interval specified, we need to buffer behind the start due to indel issues.
+    string tmp1 = region.substr(region.find(":")+1);
+    if(tmp1.find("-")<tmp1.size()) {
+      cerr << tmp1.substr(0,tmp1.find("-"))<<endl;
+      interval_start = stoi( tmp1.substr(0,tmp1.find("-")))-1;
+      interval_end = stoi(tmp1.substr(tmp1.find("-")+1))-1;
+    }
+    else {
+      interval_start=stoi(tmp1)-1;
+      interval_end=interval_start;
+    }
+    cerr << "interval_start = "<<interval_start<<" interval_end="<<interval_end<<endl;
+  }else {
+    interval_start=0;
+    interval_end=INT32_MAX;
+  }
+    
   for(int i=0;i<nreader;i++)    tmp[i]=input_files[i].substr(0,input_files[i].size()-4)+".dpt"  ;
   dp_rdr = vcf_ropen(tmp,region);
 
@@ -89,6 +107,7 @@ aggReader::aggReader(const vector<string>& input_files,const string &region) {
   line.resize(nreader);
   dp_line.resize(nreader);
   cerr << nsample<< " samples"<<endl;
+  dp_pos=-1;
   moveDepthForward();
   line_count=0;
 }
@@ -104,6 +123,7 @@ int aggReader::moveDepthForward() {
   int32_t*dp_ptr=dp;
   int32_t*gq_ptr=gq;
   int offset=0;
+
   if(  bcf_sr_next_line (dp_rdr) ) {
     for(int j=0;j<nreader;j++) {
       int nsample=bcf_hdr_nsamples(dp_rdr->readers[j].header);
@@ -138,13 +158,14 @@ int aggReader::moveDepthForward() {
 //this ensures dp_buf contains all the intervals covering the current position
 int aggReader::syncBuffer() {
   int nsync=0;//number of samples in sync with var_pos
-  if(DEBUG>1)  cerr << "var_pos = (" <<var_start+1<<","<<var_stop+1<<")"<<endl;
+  if(DEBUG>1)  cerr << "var_pos = (" <<var_start<<","<<var_stop<<")  var_type="<<var_type<<endl;
   
   bool dp_open = true;
   assert(dp_buf.size()==nsample);
   while(nsync!=nsample) {
     nsync=0;
     for(int i=0;i<nsample;i++) {
+
       if(!dp_buf[i].empty()) {
 	//our dp interval contains the variant begin genotyped.
 	if(dp_buf[i].front().stop >= var_start && dp_buf[i].back().stop >= var_stop)
@@ -166,7 +187,11 @@ int aggReader::syncBuffer() {
     }
     if(dp_chr!=cur_chr || !dp_open) break;
   }
-  
+
+  if(DEBUG>3) 
+    for(int i=0;i<nsample;i++)
+      if(!dp_buf[i].empty())      cerr << "sample"<<i<<" dp=("<<dp_buf[i].front().start<<","<<dp_buf[i].back().stop<<")"<<endl;  
+
   if(DEBUG>1) {
     float sum=0.;
     unsigned    int maxsize=0;
@@ -227,6 +252,7 @@ int aggReader::setDepth() {
       gq[i] = min_gq;
     }
   }
+  cerr<<endl;
   if(DEBUG>1){
     for(int i=0;i<nsample;i++) cerr << dp[i]<<":"<<gq[i]<<"\t";
     cerr <<endl;
@@ -280,7 +306,7 @@ int aggReader::next() {
 	    var_type=2;
 	  }
 	  else if(l1<l2) {//insertion. check for coverage at +1 position. is this sensible??
-	    var_stop = var_start + 1;	    
+	    var_stop = var_start + l1;	    
 	    var_type=1;
 	  }
 	  else {
@@ -365,6 +391,13 @@ int aggReader::next() {
 	else if(var_type!=0) {//not a SNP? fill DP from AD
 	  dp1[j] = ad[j*2]+ad[j*2+1];
 	}
+
+	//fixes the sporadic hemizgyotes
+	if((bcf_gt_is_missing(gt[j*2])||gt[j*2]==bcf_int32_vector_end) && !bcf_gt_is_missing(gt[j*2+1]))
+	  gt[j*2]=bcf_gt_unphased(0);
+	if((bcf_gt_is_missing(gt[j*2+1])||gt[j*2+1]==bcf_int32_vector_end) && !bcf_gt_is_missing(gt[j*2]))
+	  gt[j*2+1]=bcf_gt_unphased(0);
+
       }
       offset+=ntmp;
     }
@@ -424,6 +457,16 @@ void aggReader::annotate_line() {
       }
     }
   }
+  if(ac>an)  {
+    for(int i=0;i<nsample;i++)
+      cerr << bcf_gt_allele(vr->gt[i*2])<<"/"<<bcf_gt_allele(vr->gt[i*2+1])<<"\t";
+    cerr<<endl;
+    cerr<<bcf_gt_missing<<endl;
+    cerr<<bcf_int32_vector_end<<endl;
+    cerr<< bcf_int16_vector_end<<endl;
+    die("problem with genotyping at "+to_string(out_line->pos+1));
+  }
+
   pf/=nalt;
   bcf_update_info_int32(out_hdr, out_line, "AN", &an, 1);
   bcf_update_info_int32(out_hdr, out_line, "AC", &ac, 1);
@@ -471,10 +514,12 @@ int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads 
   bcf_hdr_write(out_fh, out_hdr);
 
   while(next()) {
-    annotate_line();
-    bcf_write1(out_fh, out_hdr, out_line) ;
-    bcf_clear1(out_line) ;
-    nwritten++;
+    if(var_start>=interval_start) {
+      annotate_line();
+      bcf_write1(out_fh, out_hdr, out_line) ;
+      bcf_clear1(out_line) ;
+      nwritten++;
+    }
   }
   hts_close(out_fh);
   //  bcf_hdr_destroy(hdr);

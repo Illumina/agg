@@ -66,4 +66,5 @@ class aggReader {
   int dp_chr;
   int line_count;
   int moveDepthForward();
+  int interval_start,interval_end;//the region specified.
 };
