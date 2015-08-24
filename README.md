@@ -1,4 +1,4 @@
-agg: a utility for aggregating gvcfs
+agg: a utility for aggregating gvcfs. This software is not commercially supported.
 
 Copyright (c) 2015, Illumina, Inc. All rights reserved. See LICENSE.pdf for further details.
 
