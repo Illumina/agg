@@ -473,7 +473,7 @@ void aggReader::annotate_line() {
   bcf_update_info_float(out_hdr, out_line, "PF", &pf, 1);
   bcf_update_info_int32(out_hdr, out_line, "AD", sum_ad, 2);
   bcf_update_info_int32(out_hdr, out_line, "DP", &sum_dp, 1);
-
+  bcf_update_filter(out_hdr,out_line,NULL,0);//just wipe the filters.
 }
 
 int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads ) {
