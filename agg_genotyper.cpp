@@ -337,7 +337,7 @@ int aggReader::next() {
 	int nval = 2*ntmp;
 	int ngt_read = bcf_get_genotypes(hdr, line[i], &gt, &nval);
 	if(ngt_read!=(2*ntmp) && ngt_read!=ntmp)
-	  die("incorrect ploidy at "+to_string(line[i]->pos+1)+" ngt_read="+to_string(ngt_read));
+	  die("incorrect ploidy at "+to_string(static_cast<long long>(line[i]->pos+1))+" ngt_read="+to_string(static_cast<long long>(ngt_read)));
 
 	if(ngt_read==ntmp) {//this is a hack to deal with sites where everyone has been made haploid.
 	  int *work =  new int[ntmp];
@@ -464,7 +464,7 @@ void aggReader::annotate_line() {
     cerr<<bcf_gt_missing<<endl;
     cerr<<bcf_int32_vector_end<<endl;
     cerr<< bcf_int16_vector_end<<endl;
-    die("problem with genotyping at "+to_string(out_line->pos+1));
+    die("problem with genotyping at "+to_string(static_cast<long long>(out_line->pos+1)));
   }
 
   pf/=nalt;
