@@ -2038,6 +2038,7 @@ int main_vcfmerge(int argc, char *argv[],char *file_list, char *output_fname,int
     /* if ( argc-optind<2 && !args->file_list ) error("some error"); */
 
     /* optind++; */
+    args->info_rules="-";
     args->files->require_index = 1;
     if ( args->regions_list && bcf_sr_set_regions(args->files, args->regions_list, regions_is_file)<0 )
         error("Failed to read the regions: %s\n", args->regions_list);
