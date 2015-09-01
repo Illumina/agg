@@ -1,3 +1,8 @@
+2015-09-01
+*agg ingest2 gives meaningful error when multisample-bcf provided as input
+*agg ingest2 now strips all INFO fields upon merge operation
+*changed ingest2 order of operations. variants now produced first then the .dpt file
+
 2015-08-21
 *agg now sets FILTER=. consistently
 *fixed a bug caused by "hemizygous" calls present in input gvcfs

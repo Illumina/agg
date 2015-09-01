@@ -1550,7 +1550,7 @@ void merge_line(args_t *args)
     merge_filter(args, out);
     bcf_update_filter(args->out_hdr,out,NULL,0);//just wipe the filters.
 
-    merge_info(args, out);
+    //    merge_info(args, out);
     merge_format(args, out);
 
     bcf_write1(args->out_fh, args->out_hdr, out);

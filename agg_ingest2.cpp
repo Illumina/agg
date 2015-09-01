@@ -122,7 +122,10 @@ bcf_hdr_t *depthMerger::makeDepthHeader() {
   for(int i=0;i<_nfile;i++) {
     bcf_hdr_t *src_hdr = sr->readers[i].header;
     if(i==0) copyContigs(src_hdr,out_hdr);
-    assert(bcf_hdr_nsamples(src_hdr)==1);
+    if(bcf_hdr_nsamples(src_hdr)!=1) {
+      cerr<<"ERROR: file "<<sr->readers[i].fname<<" had >1 sample.  This cannot be output from agg ingest1!"<<endl;
+      exit(1);
+    }
     char *sample_name=src_hdr->samples[0];
     if ( bcf_hdr_id2int(out_hdr, BCF_DT_SAMPLE, sample_name)!=-1 )
       die("duplicate sample names. use --force-samples if you want to merge anyway");
@@ -324,22 +327,21 @@ int merge_main(int argc,char **argv) {
   for(vector<string>::iterator it1=file_list.begin();it1!=file_list.end();it1++)
     cerr << *it1<<endl;
 
-  depthMerger d(file_list);
-
-
-  char *dp_out_fname=(char *)malloc(strlen(output)+5);
-  strcat(strcpy(dp_out_fname,output),".dpt");
-
-  d.writeDepthMatrix(dp_out_fname , n_threads);
-  cerr << "Indexing " <<dp_out_fname<<endl;
-  bcf_index_build(dp_out_fname, BCF_LIDX_SHIFT);
-
   char *output_bcf=(char *)malloc(strlen(output)+5);  strcat(strcpy(output_bcf,output),".bcf");
   cerr << "Merging variants..." <<output_bcf<<endl;
   main_vcfmerge(argc,argv,file_list_fname,output_bcf,n_threads);
   output_bcf=(char *)malloc(strlen(output)+5);  strcat(strcpy(output_bcf,output),".bcf");
   cerr << "Indexing " <<output_bcf<<endl;
   bcf_index_build(output_bcf, BCF_LIDX_SHIFT);
+
+
+  depthMerger d(file_list);
+  char *dp_out_fname=(char *)malloc(strlen(output)+5);
+  strcat(strcpy(dp_out_fname,output),".dpt");
+  d.writeDepthMatrix(dp_out_fname , n_threads);
+  cerr << "Indexing " <<dp_out_fname<<endl;
+  bcf_index_build(dp_out_fname, BCF_LIDX_SHIFT);
+
 
   return(0);
 }
