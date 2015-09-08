@@ -377,9 +377,9 @@ int aggReader::next() {
 
       for(int j=0;j<ntmp;j++) {
 	if(!has_line || (gt[j*2]==bcf_gt_missing && gt[j*2+1]==bcf_gt_missing) )  {//missing vcf entry. fill from dp_buf
-	  dp1[j]=dp[j];
-	  gq1[j]=gq[j];
-	  if(gq[j]>0||dp[j]>0) {
+	  dp1[j]=dp[j+offset];
+	  gq1[j]=gq[j+offset];
+	  if(gq1[j]>0||dp1[j]>0) {
 	    gt[j*2]=bcf_gt_unphased(0);
 	    gt[j*2+1]=bcf_gt_unphased(0);
 	  }

@@ -1,3 +1,7 @@
+2015-09-08
+*bugfix: DP/GQ were not set correctly for homref genotypes in certain circumstances (issue 3)
+*added more informative output agg ingest2 progress
+
 2015-09-01
 *agg ingest2 gives meaningful error when multisample-bcf provided as input
 *agg ingest2 now strips all INFO fields upon merge operation

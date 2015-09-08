@@ -109,6 +109,7 @@ private:
   vector< depthReader* > r;
   bcf_srs_t *sr;
   int _nfile;//how many input fiels are there?
+  vector<string> _files;
 };
 
 bcf_hdr_t *depthMerger::makeDepthHeader() {
@@ -176,18 +177,24 @@ int depthMerger::syncBuffer() {
 
   //if chromosome is finished, move to next one
   if(all_empty) {
-    bool all_closed=true;
+    int nopen=0;
     for(int i=0;i<nsample;i++)
-      all_closed=!r[i]->open;
-    //    cerr << "all_closed = " <<all_closed<<endl;
-    if(all_closed) return(0);
+      if(r[i]->open)
+	nopen++;
+
+    if(nopen==0) 
+      return(0);
     cerr << "chromosome end   = " << curr_chrom<<":"<< cur_pos<<endl;
     curr_chrom=r[0]->chrom;
     for(int i=0;i<nsample;i++) 
-      dp_buf[i].push_back( depthInterval(r[i]->line));//
-      //dp_buf[i].push_back( depthInterval(r[i]->line.start,r[i]->line.stop,r[i]->line.depth) );
+      if(r[i]->open) {
+	if(r[i]->chrom != curr_chrom) 
+	  die("chromosomes appear out of sync in .dpt files");
+	dp_buf[i].push_back( depthInterval(r[i]->line));
+      }
+      else
+	cerr << "WARNING: " << _files[i] << " is finished but "<<nopen<<" .dpt files claim to have more data!"<<endl;
     findCurrPos();
-
     return(syncBuffer());
   }
 
@@ -195,6 +202,7 @@ int depthMerger::syncBuffer() {
 }
 
 depthMerger::depthMerger(vector<string> & files) {
+  _files = files;
   nsample=n=_nfile=files.size();
 
 
