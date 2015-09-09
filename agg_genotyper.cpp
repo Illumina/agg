@@ -63,7 +63,7 @@ bcf_srs_t *vcf_ropen(const vector<string>& input_files,const string &region) {
 
 aggReader::aggReader(const vector<string>& input_files,const string &region) {
   nreader = input_files.size();
-  nsample = 0;  
+  _nsample = 0;  
   vector<string> tmp(nreader);
   for(int i=0;i<nreader;i++)    tmp[i]=input_files[i];
   var_rdr = vcf_ropen(tmp,region);
@@ -92,41 +92,46 @@ aggReader::aggReader(const vector<string>& input_files,const string &region) {
   for(int i=0;i<nreader;i++)
     assert(bcf_hdr_nsamples(var_rdr->readers[i].header) == bcf_hdr_nsamples(dp_rdr->readers[i].header));
 
-  for(int i=0;i<nreader;i++)    nsample += bcf_hdr_nsamples(var_rdr->readers[i].header);
-  dp_buf.resize(nsample);
+  for(int i=0;i<nreader;i++)    _nsample += bcf_hdr_nsamples(var_rdr->readers[i].header);
+  dp_buf.resize(_nsample);
   ndp=0;
 
-  nsample2 = 2*nsample;
-  dp = (int32_t *)malloc(nsample*sizeof(int32_t));
-  gq = (int32_t *)malloc(nsample*sizeof(int32_t));
-  for(int i=0;i<nsample;i++) {
-    dp[i] = -1;
-    gq[i] = -1;
+  _nsample2 = 2*_nsample;
+  _dp = (int32_t *)malloc(_nsample*sizeof(int32_t));
+  _gq = (int32_t *)malloc(_nsample*sizeof(int32_t));
+  _out_dp = (int32_t *)malloc(_nsample*sizeof(int32_t));
+  _out_gq = (int32_t *)malloc(_nsample*sizeof(int32_t));
+  for(int i=0;i<_nsample;i++) {
+    _dp[i] = -1;
+    _gq[i] = -1;
+    _out_dp[i] = -1;
+    _out_gq[i] = -1;
   }
-  vr = new variantRow(nsample);
+  vr = new variantRow(_nsample);
   line.resize(nreader);
   dp_line.resize(nreader);
-  cerr << nsample<< " samples"<<endl;
+  cerr << _nsample<< " samples"<<endl;
   dp_pos=-1;
   moveDepthForward();
   line_count=0;
 }
 
 aggReader::~aggReader() {
-  free(dp);
+  free(_out_dp);
+  free(_out_gq);
+  free(_dp);
+  free(_gq);
   bcf_sr_destroy(dp_rdr);
   bcf_sr_destroy(var_rdr);
   delete vr;
 }
 
 int aggReader::moveDepthForward() {
-  int32_t*dp_ptr=dp;
-  int32_t*gq_ptr=gq;
-  int offset=0;
-
+  int32_t*dp_ptr=_dp;
+  int32_t*gq_ptr=_gq;
   if(  bcf_sr_next_line (dp_rdr) ) {
     for(int j=0;j<nreader;j++) {
-      int nsample=bcf_hdr_nsamples(dp_rdr->readers[j].header);
+      int ntmp=bcf_hdr_nsamples(dp_rdr->readers[j].header);
       if( bcf_sr_has_line(dp_rdr,j) ) {
 	dp_line[j] = bcf_sr_get_line(dp_rdr,j);	  
 	ngq=ndp=bcf_hdr_nsamples(dp_rdr->readers[j].header);
@@ -139,15 +144,15 @@ int aggReader::moveDepthForward() {
 	dp_chr = dp_line[j]->rid;
       } 
       else {//no line? all DP=missing
-	for(int k=0;k<nsample;k++)  {
+	for(int k=0;k<ntmp;k++)  {
 	  dp_ptr[k]=bcf_int32_missing;
 	  gq_ptr[k]=bcf_int32_missing;
 	}
       }
-      offset+=nsample;
-      dp_ptr = &dp[offset];
-      gq_ptr = &gq[offset];
+      dp_ptr+=ntmp;
+      gq_ptr+=ntmp;
     }
+    //    cerr << "moveDepthForward: "<<dp_pos+1 <<"\t"<<dp[781]<<":"<<gq[781]<<endl;;
     return(1);
   }
   else
@@ -161,10 +166,10 @@ int aggReader::syncBuffer() {
   if(DEBUG>1)  cerr << "var_pos = (" <<var_start<<","<<var_stop<<")  var_type="<<var_type<<endl;
   
   bool dp_open = true;
-  assert(dp_buf.size()==nsample);
-  while(nsync!=nsample) {
+  assert(dp_buf.size()==_nsample);
+  while(nsync!=_nsample) {
     nsync=0;
-    for(int i=0;i<nsample;i++) {
+    for(int i=0;i<_nsample;i++) {
 
       if(!dp_buf[i].empty()) {
 	//our dp interval contains the variant begin genotyped.
@@ -177,30 +182,34 @@ int aggReader::syncBuffer() {
     }
 
     if(dp_pos <= var_stop && dp_chr==cur_chr && dp_open) {//read in intervals up to end of variant position or chromosome ends.
-      for(int i=0;i<nsample;i++) { 
-	if(!dp_buf[i].empty() && dp[i]==dp_buf[i].back().depth)
-	  dp_buf[i].back().stop++;
-	else 
-	  dp_buf[i].push_back(depthInterval(dp_pos,dp_pos,dp[i],gq[i]));	
-      }      
+      if(dp_pos>=var_start) { //are we interested in depth here?
+	for(int i=0;i<_nsample;i++) { 
+	  if(!dp_buf[i].empty() && _dp[i]==dp_buf[i].back().depth && _gq[i]==dp_buf[i].back().gq)
+	    dp_buf[i].back().stop++;
+	  else 
+	    dp_buf[i].push_back(depthInterval(dp_pos,dp_pos,_dp[i],_gq[i]));
+	}
+      }   
       dp_open=moveDepthForward();
+      if(DEBUG>1) cerr << "dp_pos="<<dp_pos<<endl;
     }
     if(dp_chr!=cur_chr || !dp_open) break;
   }
 
   if(DEBUG>3) 
-    for(int i=0;i<nsample;i++)
-      if(!dp_buf[i].empty())      cerr << "sample"<<i<<" dp=("<<dp_buf[i].front().start<<","<<dp_buf[i].back().stop<<")"<<endl;  
+    for(int i=0;i<_nsample;i++)
+      if(!dp_buf[i].empty())   
+	cerr << "sample"<<i<<" dp=("<<dp_buf[i].front().start<<","<<dp_buf[i].back().stop<<")"<<endl;  
 
   if(DEBUG>1) {
     float sum=0.;
     unsigned    int maxsize=0;
-    for(int i=0;i<nsample;i++)  {
+    for(int i=0;i<_nsample;i++)  {
       sum+=(float) dp_buf[i].size();
       if(dp_buf[i].size()>maxsize)
 	maxsize=dp_buf[i].size();
     }
-    cerr << "Mean buffer size = " << sum/nsample <<"  Max size = "<< maxsize<< endl;
+    cerr << "Mean buffer size = " << sum/_nsample <<"  Max size = "<< maxsize<< endl;
   }
 
   return(1);
@@ -208,19 +217,20 @@ int aggReader::syncBuffer() {
 
 int aggReader::setDepth() {
   if(DEBUG>1) cerr << "(var_start,var_stop) = ("<<var_start<<","<<var_stop<<")"<<endl;
-  for(int i=0;i<nsample;i++) {
+  syncBuffer();
+  for(int i=0;i<_nsample;i++) {
     deque<depthInterval>::iterator it1 = dp_buf[i].begin();
     if(var_type==0) {//snp. gets DP at inteval that contains var_start/var_stop. else DP=0
-      while(it1!=dp_buf[i].end() && it1->stop < var_start) 
+      while(it1!=dp_buf[i].end() && it1->stop < var_start)  {
 	it1++;
-
+      }
       if(it1->start <= var_start && it1->stop >= var_start) {
-	dp[i] = it1->depth;	
-	gq[i] = it1->gq;
+	_out_dp[i] = it1->depth;	
+	_out_gq[i] = it1->gq;
       }
       else {
-	dp[i] = 0;
-	gq[i] = bcf_int32_missing;
+	_out_dp[i] = 0;
+	_out_gq[i] = bcf_int32_missing;
       }
     }
     else {//indel. this calculates the avg DP across (var_start,var_stop)
@@ -231,9 +241,10 @@ int aggReader::setDepth() {
       int   var_len=b-a+1;
       float num=0;
       int pos=0;
-      int min_gq = -1;
+      int min_gq = bcf_int32_missing;
       while(it1!=dp_buf[i].end() && it1->stop < a) 
 	it1++;
+
       while(it1!=dp_buf[i].end() && it1->start <= b) {
 	//dp
 	if(it1->start <= a && it1->stop >= b) 
@@ -244,17 +255,17 @@ int aggReader::setDepth() {
 	  num += (b - it1->start + 1)*it1->depth;
 	//gq.  simply finding the mingq across the region.
 	if( (a<=it1->start && b>=it1->start) || (a<=it1->stop && b>=it1->stop) )
-	  if(min_gq==-1 || it1->gq < min_gq)
+	  if(min_gq==bcf_int32_missing||it1->gq < min_gq)
 	    min_gq = it1->gq;
 	it1++;
       }
-      dp[i] = (int)(round(num/(float)var_len));
-      gq[i] = min_gq;
+      _out_dp[i] = (int)(round(num/(float)var_len));
+      _out_gq[i] = min_gq;
     }
   }
 
-  if(DEBUG>1){
-    for(int i=0;i<nsample;i++) cerr << dp[i]<<":"<<gq[i]<<"\t";
+  if(DEBUG>3) {
+    for(int i=0;i<_nsample;i++) cerr << _dp[i]<<":"<<_gq[i]<<"\t";
     cerr <<endl;
   }
 
@@ -282,7 +293,7 @@ int aggReader::next() {
 	    cerr << "dp_chr = "<<dp_chr<<"    dp_pos = "<< dp_pos<<endl;
 	  }
 
-	  for(int i=0;i<nsample;i++)
+	  for(int i=0;i<_nsample;i++)
 	    dp_buf[i].clear();
 	}
 
@@ -317,7 +328,7 @@ int aggReader::next() {
       }
     }
 
-    syncBuffer();
+
     setDepth();
     if(DEBUG>1) cout << var_start+1 <<"-"<<var_stop+1 << endl;
     int offset=0;
@@ -377,8 +388,8 @@ int aggReader::next() {
 
       for(int j=0;j<ntmp;j++) {
 	if(!has_line || (gt[j*2]==bcf_gt_missing && gt[j*2+1]==bcf_gt_missing) )  {//missing vcf entry. fill from dp_buf
-	  dp1[j]=dp[j+offset];
-	  gq1[j]=gq[j+offset];
+	  dp1[j]=_out_dp[j+offset];
+	  gq1[j]=_out_gq[j+offset];
 	  if(gq1[j]>0||dp1[j]>0) {
 	    gt[j*2]=bcf_gt_unphased(0);
 	    gt[j*2+1]=bcf_gt_unphased(0);
@@ -404,12 +415,12 @@ int aggReader::next() {
 
 
     //updates output-line
-    assert(    bcf_hdr_nsamples(out_hdr)==nsample );
-    bcf_update_genotypes(out_hdr,out_line,vr->gt,nsample*2); 
-    bcf_update_format_int32(out_hdr,out_line,"GQ",vr->gq,nsample);
-    bcf_update_format_int32(out_hdr,out_line,"DP",vr->dp,nsample );
-    bcf_update_format_int32(out_hdr,out_line,"AD",vr->ad,nsample*n_allele );
-    bcf_update_format_int32(out_hdr,out_line,"PF",vr->pf,nsample );
+    assert(    bcf_hdr_nsamples(out_hdr)==_nsample );
+    bcf_update_genotypes(out_hdr,out_line,vr->gt,_nsample*2); 
+    bcf_update_format_int32(out_hdr,out_line,"GQ",vr->gq,_nsample);
+    bcf_update_format_int32(out_hdr,out_line,"DP",vr->dp,_nsample );
+    bcf_update_format_int32(out_hdr,out_line,"AD",vr->ad,_nsample*n_allele );
+    bcf_update_format_int32(out_hdr,out_line,"PF",vr->pf,_nsample );
     line_count++;
     return(1);
   }
@@ -423,7 +434,7 @@ void aggReader::annotate_line() {
   int32_t sum_ad[2] = {0,0};
   float pf = 0.;
   float nalt=0;// number of genotypes containing an ALT allele.
-  for(int i=0;i<nsample;i++) {
+  for(int i=0;i<_nsample;i++) {
     //allele counts
     if(vr->gt[i*2]!=bcf_gt_missing) {
       ac+=bcf_gt_allele(vr->gt[i*2]);
@@ -458,7 +469,7 @@ void aggReader::annotate_line() {
     }
   }
   if(ac>an)  {
-    for(int i=0;i<nsample;i++)
+    for(int i=0;i<_nsample;i++)
       cerr << bcf_gt_allele(vr->gt[i*2])<<"/"<<bcf_gt_allele(vr->gt[i*2+1])<<"\t";
     cerr<<endl;
     cerr<<bcf_gt_missing<<endl;
@@ -498,7 +509,7 @@ int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads 
     bcf_hdr_t *hr = var_rdr->readers[i].header;
     for(int j=0;j<bcf_hdr_nsamples(hr);j++) {
       string sample_name=hr->samples[j];
-      if ( bcf_hdr_id2int(out_hdr, BCF_DT_SAMPLE, sample_name.c_str())!=-1 )
+      if ( bcf_hdr_id2int(out_hdr, BCF_DT_SAMPLE, sample_name.c_str())!=-1 ) {
 	if(force_samples) {
 	  cerr << "Warning duplicate sample found.\t" << sample_name;
 	  sample_name += ":R"+to_string(static_cast<long long>(repeat_count++));
@@ -506,6 +517,7 @@ int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads 
 	}
 	else
 	  die("duplicate sample names. use --force-samples if you want to merge anyway");
+      }
       bcf_hdr_add_sample(out_hdr,sample_name.c_str());
     }
   }

@@ -35,7 +35,7 @@ class aggReader {
   ~aggReader();
   int writeVcf(const char *output_file,char *output_type,int n_threads=0);//writes out a (homref called) vcf/bcf
   //  int writeDepthMatrix();//prints a depth matrix to stdout.
-  int nsample,nsample2;
+  int _nsample,_nsample2;
 
  private:
   int setSites(string region);
@@ -60,8 +60,8 @@ class aggReader {
   bcf_srs_t *var_rdr;    
   int nreader;
   variantRow *vr;
-  int32_t*dp,ndp;
-  int32_t*gq,ngq;
+  int32_t*_dp,*_out_dp,ndp;
+  int32_t*_gq,*_out_gq,ngq;
   int cur_chr;//current chromosome (bcf key)
   int dp_chr;
   int line_count;
