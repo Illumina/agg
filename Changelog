@@ -1,3 +1,9 @@
+2015-10-09
+*bugfix: handles cases where some samples have no lines for certain contiges (eg chrY on females)
+*bugfix: problem with truncating .dpt files on agg ingest1
+*chromosome string will now be printed, rather than its htslib integer rid
+
+
 2015-09-08
 *bugfix: DP/GQ were not set correctly for homref genotypes in certain circumstances (issue 3)
 *added more informative output agg ingest2 progress

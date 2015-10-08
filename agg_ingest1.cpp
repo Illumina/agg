@@ -151,7 +151,8 @@ int ingest1(const char *input,const char*output) {
 	assert(GQX_ptr!=NULL);
 	buf[4]=atoi(GQX_ptr);
 	//	printf("%d\t%d\t%d\t%d\t%d\n",buf[0],buf[1],buf[2],buf[3],buf[4]);
-	gzwrite(depth_fp,buf,5*sizeof(int));
+	if(gzwrite(depth_fp,buf,5*sizeof(int))!=(5*sizeof(int)))
+	  die("ERROR: problem writing "+(string)out_fname+".dpt");
       }
       if(is_variant) {//wass this a variant? if so write it out to the bcf
 	vcf_parse(&str,hdr,bcf_rec);
@@ -179,6 +180,7 @@ int ingest1(const char *input,const char*output) {
 
   ks_destroy(ks);
   gzclose(fp);
+  gzclose(depth_fp);  
   free(str.s);
   free(work1.s);
   hts_close(hfp);
