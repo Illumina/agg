@@ -75,7 +75,7 @@ int ingest1(const char *input,const char*output) {
 
   char *out_fname = (char *)malloc(strlen(output)+5);
   strcpy(out_fname,output);
-  strcat(out_fname,".dpt");
+  strcat(out_fname,".tmp");
   if(fileexists(out_fname)) {
     fprintf(stderr,"%s file already exists. will not overwrite\n",out_fname);
     exit(1);
@@ -152,7 +152,7 @@ int ingest1(const char *input,const char*output) {
 	buf[4]=10 * atoi(GQX_ptr)/10;
 	//	printf("%d\t%d\t%d\t%d\t%d\n",buf[0],buf[1],buf[2],buf[3],buf[4]);
 	if(gzwrite(depth_fp,buf,5*sizeof(int))!=(5*sizeof(int)))
-	  die("ERROR: problem writing "+(string)out_fname+".dpt");
+	  die("ERROR: problem writing "+(string)out_fname+".tmp");
       }
       if(is_variant) {//wass this a variant? if so write it out to the bcf
 	vcf_parse(&str,hdr,bcf_rec);
@@ -193,11 +193,11 @@ int ingest1(const char *input,const char*output) {
 
 static void usage(){
   fprintf(stderr, "\n");
-  fprintf(stderr, "About:   ingest a single sample gvcf into a variant-only bcf and depth track file (.dpt)\n");
+  fprintf(stderr, "About:   ingest a single sample gvcf into a variant-only .bcf and tempory depth interval (.tmp)\n");
   fprintf(stderr, "Usage:   agg ingest <input_gvcf>\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Required options:\n");
-  fprintf(stderr, "    -o, --output <output_prefix>              agg will output output_prefix.bcf and output_prefix.dpt\n");
+  fprintf(stderr, "    -o, --output <output_prefix>              agg will output output_prefix.bcf and output_prefix.tmp\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n");
   exit(1);

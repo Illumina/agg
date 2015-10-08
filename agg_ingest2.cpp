@@ -209,7 +209,7 @@ int depthMerger::syncBuffer() {
       }
       else {
 	if(!_eof_warn) {
-	  cerr << "WARNING: " << _files[i] << " is finished but "<<nopen<<" .dpt files claim to have more data!"<<endl;
+	  cerr << "WARNING: " << _files[i] << " is finished but "<<nopen<<" .tmp files claim to have more data!"<<endl;
 	  _eof_warn=true;
 	}
       }
@@ -240,10 +240,10 @@ depthMerger::depthMerger(vector<string> & files) {
   cerr << "nsample="<<nsample<<endl;
   for(int i=0;i<_nfile;i++)  {
     string tmp = files[i];
-    tmp = tmp.substr(0,tmp.size()-3) + "dpt";
+    tmp = tmp.substr(0,tmp.size()-3) + "tmp";
     r.push_back(new depthReader(tmp.c_str()));
   }
-  cerr << "opened "<<n<<" .dpt files for merging..."<<endl;    
+  cerr << "opened "<<n<<" .tmp files for merging..."<<endl;    
   dp_buf.resize(n);
   for(int i=0;i<n;i++)  {
     assert(r[i]->next());
