@@ -269,7 +269,7 @@ int depthMerger::writeDepthMatrix(const char *output_file,int nthreads) {
   gq = new int32_t[nsample];
   findCurrPos();
 
-  htsFile *out_fh =   hts_open(output_file,"wb");
+  htsFile *out_fh =   hts_open(output_file,"wb1");
   if(nthreads>0)  hts_set_threads(out_fh,nthreads);
 
   bcf_hdr_write(out_fh, _hdr);
