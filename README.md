@@ -77,7 +77,7 @@ $ find ingest1/ -name '*.bcf' > ingest1.txt
 $ split -d -l 100 ingest1.txt chunk_ 
 $ ls chunk_*
 chunk_00  chunk_01  chunk_02  chunk_03  chunk_04
-$ for i in chunk_*;do echo ingest2 -l $i -@4 -o $i;done | xargs -l -P 16
+$ for i in chunk_*;do echo ingest2 -l $i -@4 -o $i;done | xargs -l -P 16 agg
 ...
 $ ls chunk_*.*
 ```
