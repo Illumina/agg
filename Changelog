@@ -1,10 +1,13 @@
+2015-10-19
+*added the make_chunk.py script
+
 2015-10-09
 *bugfix: handles cases where some samples have no lines for certain contiges (eg chrY on females)
 *bugfix: problem with truncating .dpt files on agg ingest1
 *chromosome string will now be printed, rather than its htslib integer rid
 *homref GQ is now rounded down to nearest multiple of 10 to aid compression
 *changed agg ingest1 output to .bcf+.tmp file to avoid confusion
-	
+
 2015-09-08
 *bugfix: DP/GQ were not set correctly for homref genotypes in certain circumstances (issue 3)
 *added more informative output agg ingest2 progress
