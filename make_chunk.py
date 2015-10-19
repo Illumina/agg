@@ -17,8 +17,7 @@ if __name__ == "__main__":
     ##binaries
     if args.agg==None:
         args.agg=os.path.dirname(os.path.realpath(sys.argv[0]))+"/agg"
-    print args.agg
-    sys.exit()
+
     if not os.path.isfile(args.agg):
         sys.exit(args.agg + " binary not found!")
 
@@ -45,10 +44,9 @@ if __name__ == "__main__":
         sys.stderr.write(cmd+"\n")
         try:
             subprocess.check_output(cmd,shell=True)
-            return(tmp_out)
+            return(tmp_out+".bcf")
         except:
             raise Exception("problem running agg on %s\n"%f)
-        return(tmp_out+".bcf")
 
     try:
         time0=time.time()
