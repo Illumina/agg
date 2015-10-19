@@ -149,8 +149,14 @@ int ingest1(const char *input,const char*output) {
 	buf[3]=atoi(DP_ptr);
 	char *GQX_ptr = find_format(ptr,"GQX");
 	assert(GQX_ptr!=NULL);
-	buf[4]=atoi(GQX_ptr)/10;//rounds down to nearest 10
+	
+	//trying to reduce entropy on GQ to get better compression performance.
+	//1. rounds down to nearest 10. 
+	//2. sets gq to min(gq,100). 
+	buf[4]=atoi(GQX_ptr)/10;
 	buf[4]*=10;
+	if(buf[4]>100) buf[4]=100;
+
 	//	printf("%d\t%d\t%d\t%d\t%d\n",buf[0],buf[1],buf[2],buf[3],buf[4]);
 	if(gzwrite(depth_fp,buf,5*sizeof(int))!=(5*sizeof(int)))
 	  die("ERROR: problem writing "+(string)out_fname+".tmp");
