@@ -41,7 +41,29 @@ Commands:
 #####Building an agg chunk
 The input to agg's genotyping routine is one or more agg "chunks".  As new batches of samples arrive they can be rolled into a new chunk, without the need to modify previous chunks containing older samples. 
 
-Creating a chunk is currently a two stage process using the `agg ingest1` and `agg ingest2` commands.  The individual gvcfs are first pre-processed with `ingest1` and then merged into a chunk with `agg ingest2`.  In the future, we plain to wrap these these two steps into a single (faster) `ingest` command.
+Creating a chunk is currently a two stage process using the `agg ingest1` and `agg ingest2` commands.  The individual gvcfs are first pre-processed with `ingest1` and then merged into a chunk with `agg ingest2`.  In the future, we plan to wrap these these two steps into a single (faster) `ingest` command.
+
+######The easy way: make_chunk.py
+The easiest way to make a chunk is with the provided python script, although this might not be the most efficient way to do things depending on your compute setup. Say we have a plain test list of a few thousand gvcfs in `gvcfs.txt`. We will build chunks of size 500 (watch out for file handle limits), so first split your gvcf list via:
+```
+split -d -l 500 gvcfs.txt chunk_
+```
+then run the script on each chunk
+```
+mkdir chunks/
+for i in chunk_*;
+do
+        python ~/agg/make_chunk.py $i -o chunks/${i} -nproc 16 -tmp /scratch/
+done        
+```
+Note the above command will:
+*use 16 processes
+*take a while (~24 hours)
+*put a lot of temporary files on /scratch/ (~1.5GB per sample)
+
+In practice, a user would want to submit each of these commands to a cluster node with multiple cores sufficient local scratch.
+
+Alternatively, the individual commands in this script are detailed in the next two sections. Users may be able to design more efficient bespoke pipelines for their respective systems.
 
 ######ingest1: pre-process gvcfs
 You can do this to one gvcf like so:
