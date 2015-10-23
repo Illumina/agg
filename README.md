@@ -57,9 +57,9 @@ do
 done        
 ```
 Note the above command will:
-*use 16 processes
-*take a while (~24 hours)
-*put a lot of temporary files on /scratch/ (~1.5GB per sample)
+* use 16 processes
+* take a while (~24 hours)
+* put a lot of temporary files on /scratch/ (~1.5GB per sample)
 
 In practice, a user would want to submit each of these commands to a cluster node with multiple cores sufficient local scratch.
 
