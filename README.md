@@ -65,7 +65,10 @@ In practice, a user would want to submit each of these commands to a cluster nod
 
 Alternatively, the individual commands in this script are detailed in the next two sections. Users may be able to design more efficient bespoke pipelines for their respective systems.
 
-######ingest1: pre-process gvcfs
+######The more complicated way
+You can skip to the genotyping section if you used the `make_chunk.py` script.
+
+#######ingest1: pre-process gvcfs
 You can do this to one gvcf like so:
 ```
 $ mkdir ingest1/
@@ -90,7 +93,7 @@ note you can replace `cat gvcfs.txt` with `find . -name '*.genome.vcf.gz'` or si
 
 These files are the input for `agg ingest2`, which builds a chunk and is explained next. These intermediate files are rather large (1GB-2GB per sample), but after building a chunk they can be disposed of. You may wish to store them on local scratch space if it is available.
 
-######ingest2: merge temporary files into a chunk
+#######ingest2: merge temporary files into a chunk
 Let's roll these intermediate files into five separate agg chunks (100 samples per chunk). We will use `xargs` to leverage multiple cores again.
 ```
 ##get bcfs from ingest1 step
