@@ -21,30 +21,10 @@ make
 
 It should be noted that parts of the agg source code were taken directly from the excellent [bcftools](https://github.com/samtools/bcftools) which is licensed permissively under BSD.
 
-###Usage
-
-```
-./agg
-Program:        agg 75c2488 (aggregation tool for multiple samples)
-Contact:        joconnell@illumina.com
-
-Copyright (c) 2015, Illumina, Inc. All rights reserved. See LICENSE.pdf for further details.
-
-Usage:  agg <command> [options]
-
-Commands:
-        ingest1         converts gvcfs to input suitable for agg ingest2
-        ingest2         uses output files from ingest1 to build an agg chunk
-        genotype        genotypes and merges agg chunks into a multi-sample bcf/vcf
-```
-
 ###Building an agg chunk
 The input to agg's genotyping routine is one or more agg "chunks".  As new batches of samples arrive they can be rolled into a new chunk, without the need to modify previous chunks containing older samples. 
 
-Creating a chunk is currently a two stage process using the `agg ingest1` and `agg ingest2` commands.  The individual gvcfs are first pre-processed with `ingest1` and then merged into a chunk with `agg ingest2`.  In the future, we plan to wrap these these two steps into a single (faster) `ingest` command.
-
-#####The easy way: make_chunk.py
-The easiest way to make a chunk is with the provided python script, although this might not be the most efficient way to do things depending on your compute setup. Say we have a plain text list of a few thousand gvcfs in `gvcfs.txt`. We will build chunks of size 500 (watch out for file handle limits), so first split your gvcf list via:
+The easiest way to make a chunk is with the provided python script which wraps several agg commands. Say we have a plain text list of a few thousand gvcfs in `gvcfs.txt`. We will build chunks of size 500 (watch out for file handle limits), so first split your gvcf list via:
 ```
 split -d -l 500 gvcfs.txt chunk_
 ```
@@ -63,49 +43,7 @@ Note the above command will:
 
 In practice, a user would want to submit each of these commands to a cluster node with multiple cores and sufficient local scratch.
 
-Alternatively, the individual commands in this script are detailed in the next two sections. Users may be able to design more efficient bespoke pipelines for their respective systems.
-
-#####The more complicated way
-You can skip to the genotyping section if you used the `make_chunk.py` script.
-
-######ingest1: pre-process gvcfs
-You can do this to one gvcf like so:
-```
-$ mkdir ingest1/
-$ agg ingest1 sample1.genome.vcf.gz -o ingest1/sample1
-Input: sample1.genome.vcf.gz    Output: ingest1/sample1
-depth: ingest1/sample1.dpt
-variants: ingest1/sample1.bcf
-Indexing ingest1/sample1.bcf
-Done.
-```
-this takes ~10 minutes.
-
-In practice, we have 100s to 1000s of gvcfs and want to automate things. Say you have a 16 core node and want to build an agg chunk from 500 gvcfs listed in `gvcfs.txt`.  We can leverage the multiple CPUs using the `xargs` command.
-```
-$ for i in `cat gvcfs.txt`;
-  do 
-     out=$(basename ${i%.genome.vcf.gz});
-     echo ingest1 $i -o ingest1/${out};
-  done | xargs -P 16 -l agg
-```
-note you can replace `cat gvcfs.txt` with `find . -name '*.genome.vcf.gz'` or similar.
-
-These files are the input for `agg ingest2`, which builds a chunk and is explained next. These intermediate files are rather large (1GB-2GB per sample), but after building a chunk they can be disposed of. You may wish to store them on local scratch space if it is available.
-
-######ingest2: merge temporary files into a chunk
-Let's roll these intermediate files into five separate agg chunks (100 samples per chunk). We will use `xargs` to leverage multiple cores again.
-```
-##get bcfs from ingest1 step
-$ find ingest1/ -name '*.bcf' > ingest1.txt 
-#splits the file into 5 groups of 100
-$ split -d -l 100 ingest1.txt chunk_ 
-$ ls chunk_*
-chunk_00  chunk_01  chunk_02  chunk_03  chunk_04
-$ for i in chunk_*;do echo ingest2 -l $i -@4 -o $i;done | xargs -l -P 16 agg
-...
-$ ls chunk_*.*
-```
+The `make_chunk.py` script simply wraps some agg commands for ease-of-use. Users may be able to design more efficient bespoke pipelines for their respective systems. For a description of how to do this manual see [doc/ingest.md](doc/ingest.md)
 
 ###Genotyping and merging agg chunks
 Once you have your chunks, life is easy.  Simply call `agg genotype` on any number of chunks to produce a typical multi-sample bcf/vcf that contains all the samples in all the chunks genotyped at all variants seen across the chunks. 
