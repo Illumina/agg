@@ -61,7 +61,7 @@ Note the above command will:
 
 In practice, a user would want to submit each of these commands to a cluster node with multiple cores and sufficient local scratch.
 
-Alternatively, the individual commands in this script are detailed in the next two sections. Users may be able to design more efficient bespoke pipelines for their respective systems.
+The `make_chunk.py` script simply wraps some agg commands for ease-of-use. Users may be able to design more efficient bespoke pipelines for their respective systems. For a description of how to do this manual see [doc/ingest.md](doc/ingest.md)
 
 ###Genotyping and merging agg chunks
 Once you have your chunks, life is easy.  Simply call `agg genotype` on any number of chunks to produce a typical multi-sample bcf/vcf that contains all the samples in all the chunks genotyped at all variants seen across the chunks. 
