@@ -1,5 +1,7 @@
 #####Making an agg chunk
-You can skip to the genotyping section if you used the `make_chunk.py` script.
+This describes how to build an agg chunk "manually", that is, not using the `make_chunk.py` script.
+
+Creating a chunk is currently a two stage process using the `agg ingest1` and `agg ingest2` commands.  The individual gvcfs are first pre-processed with `ingest1` and then merged into a chunk with `agg ingest2`.  In the future, we plan to wrap these these two steps into a single (faster) `ingest` command.
 
 ######ingest1: pre-process gvcfs
 You can do this to one gvcf like so:

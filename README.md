@@ -41,10 +41,8 @@ Commands:
 ###Building an agg chunk
 The input to agg's genotyping routine is one or more agg "chunks".  As new batches of samples arrive they can be rolled into a new chunk, without the need to modify previous chunks containing older samples. 
 
-Creating a chunk is currently a two stage process using the `agg ingest1` and `agg ingest2` commands.  The individual gvcfs are first pre-processed with `ingest1` and then merged into a chunk with `agg ingest2`.  In the future, we plan to wrap these these two steps into a single (faster) `ingest` command.
-
-#####The easy way: make_chunk.py
-The easiest way to make a chunk is with the provided python script, although this might not be the most efficient way to do things depending on your compute setup. Say we have a plain text list of a few thousand gvcfs in `gvcfs.txt`. We will build chunks of size 500 (watch out for file handle limits), so first split your gvcf list via:
+#####`make_chunk.py`
+The easiest way to make a chunk is with the provided python script which wraps several agg commands. Say we have a plain text list of a few thousand gvcfs in `gvcfs.txt`. We will build chunks of size 500 (watch out for file handle limits), so first split your gvcf list via:
 ```
 split -d -l 500 gvcfs.txt chunk_
 ```
