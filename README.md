@@ -21,27 +21,9 @@ make
 
 It should be noted that parts of the agg source code were taken directly from the excellent [bcftools](https://github.com/samtools/bcftools) which is licensed permissively under BSD.
 
-###Usage
-
-```
-./agg
-Program:        agg 75c2488 (aggregation tool for multiple samples)
-Contact:        joconnell@illumina.com
-
-Copyright (c) 2015, Illumina, Inc. All rights reserved. See LICENSE.pdf for further details.
-
-Usage:  agg <command> [options]
-
-Commands:
-        ingest1         converts gvcfs to input suitable for agg ingest2
-        ingest2         uses output files from ingest1 to build an agg chunk
-        genotype        genotypes and merges agg chunks into a multi-sample bcf/vcf
-```
-
 ###Building an agg chunk
 The input to agg's genotyping routine is one or more agg "chunks".  As new batches of samples arrive they can be rolled into a new chunk, without the need to modify previous chunks containing older samples. 
 
-#####`make_chunk.py`
 The easiest way to make a chunk is with the provided python script which wraps several agg commands. Say we have a plain text list of a few thousand gvcfs in `gvcfs.txt`. We will build chunks of size 500 (watch out for file handle limits), so first split your gvcf list via:
 ```
 split -d -l 500 gvcfs.txt chunk_
