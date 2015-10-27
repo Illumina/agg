@@ -5,7 +5,7 @@
 int fillHeader(bcf_hdr_t *hdr) {//fills in the standard stuff for an agg header.
 
   bcf_hdr_append(hdr, "##source=agg");
-  bcf_hdr_append(hdr, "##INFO=<ID=PF,Number=1,Type=Float,Description=\"proport of genotypes containing an ALT that passed the original single sample gvcf filter\">");
+  bcf_hdr_append(hdr, "##INFO=<ID=PF,Number=A,Type=Float,Description=\"proport of genotypes containing an ALT that passed the original single sample gvcf filter\">");
   bcf_hdr_append(hdr, "##INFO=<ID=GN,Number=G,Type=Integer,Description=\"count of each genotype.\">"); //todo.
   bcf_hdr_append(hdr, "##INFO=<ID=AD,Number=R,Type=Integer,Description=\"sum of allele depths for ALL individuals\">"); //todo.
   bcf_hdr_append(hdr, "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"sum of depth  across all samples\">");
@@ -574,6 +574,7 @@ int view1(int argc,char **argv) {
         {"regions",1,0,'r'},
         {"output-type",1,0,'O'},
         {"output-file",1,0,'o'},
+	{"thread",1,0,'@'},
         {0,0,0,0}
     };
     char *output,*output_type;
