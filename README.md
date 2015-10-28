@@ -8,6 +8,13 @@ The agg source code is provided under the [GPLv3 license] (LICENSE).
 
 This tool implements a basic pipeline to merge Illumina gvcfs in a dynamic fashion. That is, not all gvcfs need to merged at once, new groups of samples can be added periodically.  It achieves this by storing variants in a standard bcf and storing depth/GQ information in an auxilliary file (.dpt - depth track). The variants and depth files make up an "agg chunk" and these chunks can then be merged and genotyped, with the depth file allowing the union of variants to be genotyped across all samples.  Note, here "genotyping" simply means we can gauge the coverage/GQ at a variant position for samples that do not have that variant, allowing us to examine the evidence that this sample was homozygous reference at that location.
 
+For example, if you had 3000 gvcfs, your pipeline might be:
+
+1. Create 6 agg chunks of samples 500 (ingestion)
+2. Create 3000 sample bcf from these 6 chunks (genotyping)
+
+The advantage of this approach is that when another 500 samples come along, you only have to build one new chunk (step 1) and then re-genotype from the 6+1=7 chunks to create a 3500 sample bcf (step 2). This is faster than merging from all gvcfs every time some new samples arrive.
+
 *Note:* if you are working with relatively few gvcfs, then [gvcftools](https://github.com/sequencing/gvcftools) merge_variants is more appropriate.  The agg pipeline is more complex to run and is geared towards 1000s of gvcfs.
 
 ###Installation
