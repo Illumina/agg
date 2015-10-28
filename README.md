@@ -17,6 +17,7 @@ The only compilation dependency is [htslib](http://www.htslib.org/) which is inc
 git clone git@github.com:BEETL/agg.git
 cd agg/
 make
+./agg
 ```
 
 It should be noted that parts of the agg source code were taken directly from the excellent [bcftools](https://github.com/samtools/bcftools) which is licensed permissively under BSD.
