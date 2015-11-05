@@ -27,6 +27,8 @@ agg_genotyper.o: agg_genotyper.cpp agg_genotyper.h
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c agg_genotyper.cpp  
 agg_utils.o: agg_utils.cpp agg.h 
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $< 
+depthMerger.o:  depthMerger.cpp depthMerger.h
+	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c depthMerger.cpp 
 agg_ingest2.o: agg_ingest2.cpp agg.h 
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $<  
 agg_ingest1.o: agg_ingest1.cpp agg_ingest1.h agg.h
@@ -39,8 +41,11 @@ vcfnorm.o: vcfnorm.c
 vcmp.o: vcmp.c
 	$(CC) $(CFLAGS) -c $<  
 ##binary
-agg: agg.cpp vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.h $(HTSLIB)
+agg: agg.cpp depthMerger.o vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.h $(HTSLIB)
+	$(CXX) $(CFLAGS)  -o agg agg.cpp vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o depthMerger.o $(HTSLIB) $(LFLAGS) 
+agg_ingest: agg_ingest.cpp vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.h $(HTSLIB)
 	$(CXX) $(CFLAGS)  -o agg agg.cpp vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o $(HTSLIB) $(LFLAGS) 
+
 
 #housekeeping
 all:  $(ALL)
