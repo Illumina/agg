@@ -11,7 +11,7 @@ This tool implements a basic pipeline to merge Illumina gvcfs in a dynamic fashi
 For example, if you had 3000 gvcfs, your pipeline might be:
 
 1. Create 6 agg chunks of samples 500 (ingestion)
-2. Create 3000 sample bcf from these 6 chunks (genotyping)
+2. Create 3000 sample vcf/bcf from these 6 chunks (genotyping)
 
 The advantage of this approach is that when another 500 samples come along, you only have to build one new chunk (step 1) and then re-genotype from the 6+1=7 chunks to create a 3500 sample bcf (step 2). This is faster than merging from all gvcfs every time some new samples arrive.
 
