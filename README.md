@@ -80,9 +80,9 @@ The output from `agg` is very raw, containing all variants called in any sample,
 * remove sites where < 90% of genotypes are called (after GQ<10 removal)
 * remove sites where QUAL<30
 
-this can be achieved by:
+this can be achieved with something like:
 ```
-bcftools filter -e 'FMT/GQ<10' -S . -O u | bcftools annotate -x FILTER -Ou| bcftools view -i 'QUAL>=30 & AN>500' -Ob -o merged.flt.bcf
+bcftools filter -e 'FMT/GQ<10' -S . -O u | bcftools annotate -x FILTER -Ou| bcftools view -i 'QUAL>=30 & AN>900' -Ob -o merged.flt.bcf
 ```
 This is very crude, typically one may also filter on extreme depth, allelic imbalance, divergence from HWE etc etc.
 
