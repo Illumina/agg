@@ -40,9 +40,11 @@ vcfnorm.o: vcfnorm.c
 	$(CC) $(CFLAGS) -c $<  
 vcmp.o: vcmp.c
 	$(CC) $(CFLAGS) -c $<  
+kthread.o: kthread.c
+	$(CC) $(CFLAGS) -c $<  
 ##binary
-agg: agg.cpp depthMerger.o vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.h $(HTSLIB)
-	$(CXX) $(CFLAGS)  -o agg agg.cpp vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o depthMerger.o $(HTSLIB) $(LFLAGS) 
+agg: agg.cpp depthMerger.o vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.h kthread.o $(HTSLIB)
+	$(CXX) $(CFLAGS)  -o agg agg.cpp vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o depthMerger.o kthread.o  $(HTSLIB) $(LFLAGS) 
 agg_ingest: agg_ingest.cpp vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.h $(HTSLIB)
 	$(CXX) $(CFLAGS)  -o agg agg.cpp vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o $(HTSLIB) $(LFLAGS) 
 
