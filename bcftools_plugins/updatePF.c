@@ -45,14 +45,16 @@ int init(int argc, char **argv, bcf_hdr_t *in, bcf_hdr_t *out)
   n =  bcf_hdr_nsamples(in_hdr);
   gt = (int *)malloc(2*n*sizeof(int));
   f_pf = (int *)malloc(n*sizeof(int));
+  bcf_hdr_append(out_hdr, "##INFO=<ID=PF,Number=A,Type=Float,Description=\"proportion of genotypes containing an ALT that passed the original single sample gvcf filter\">");
+
   return 0;
 }
 
 bcf1_t *process(bcf1_t *rec)
 {
   int i;
-  int ret = bcf_get_genotypes(in_hdr, rec, &gt, &ngt);
-  ret =  bcf_get_format_int32(in_hdr, rec, "PF", &f_pf, &npf);
+  bcf_get_genotypes(in_hdr, rec, &gt, &ngt);
+  assert(bcf_get_format_int32(in_hdr, rec, "PF", &f_pf, &npf)>0);
   float i_pf=0.;
   float nalt=0;
   for(i=0;i<n;i++) {
