@@ -106,7 +106,6 @@ int ingest1(const char *input,const char*output) {
   bcf_hdr_remove(hdr,BCF_HL_FMT,"AD");
   assert(  bcf_hdr_append(hdr,"##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed. For indels this value only includes reads which confidently support each allele (posterior prob 0.999 or higher that read contains indicated allele vs all other intersecting indel alleles)\">") == 0);
 
-
   //this is a hack to fix broken gvcfs where GQ is incorrectly labelled as float (v4.3 spec says it should be integer)
   bcf_hdr_remove(hdr,BCF_HL_FMT,"GQ");
   assert(  bcf_hdr_append(hdr,"##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">") == 0);
@@ -204,7 +203,6 @@ static void usage(){
   exit(1);
 }
 
-
 typedef struct{
   char *input,*output;
 } thread_args;
@@ -236,8 +234,6 @@ void *thread_func(void *ptr) {
 
 
 int main(int argc,char **argv) {
-
-
   int result_code, index;
   int nfile=argc-2;
   int nthreads=atoi(argv[1]);

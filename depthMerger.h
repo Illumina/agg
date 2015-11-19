@@ -47,13 +47,15 @@ class depthReader {
   int buf[5];
 };
 
+
+
 class depthMerger {
  public:
   int _nsample;
   int32_t *dp,*gq;
   depthMerger(vector<string> & files);
   ~depthMerger();
-  int writeDepthMatrix(const char *output_file,int nthreads=0);
+  int writeDepthMatrix(const char *output_file);
   int next();
   int findCurrPos();
   bcf_hdr_t *makeDepthHeader();
@@ -61,17 +63,28 @@ class depthMerger {
   int getCurPos();
   bcf_hdr_t *getHeader();
   void fillBuffer(int i);
+  int setThreads(int nthreads);
+  bool anyOpen();
+  int _nthreads;
+
  private:
+  pthread_t *_threads;
   const static  int buf_size=10000;
+
   int cur_pos;
   int curr_chrom;
   vector< deque< depthInterval > > dp_buf;//stores the depth intervals for nsamples.
   vector< depthReader* > r;
   bcf_srs_t *sr;
-  int _nfile;//how many input fiels are there?
   vector<string> _files;
   bcf_hdr_t *_hdr;
   bool _eof_warn;
+  pthread_mutex_t *_dp_buf_mutex;
+  pthread_cond_t _less,_more;//signals buffer was incremented/decrermented.
+  void  unlockDepthBuffer();
+  void lockDepthBuffer();
+  bool checkBufferIsOkayToRead();
+  void startReadBuffer();
+  
+  struct  next_args *_dp_buf_args;
 };
-
-
