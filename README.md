@@ -72,6 +72,7 @@ $ for i in {1..22};do echo merged.chr${i}.bcf;done > files_to_concat.txt
 $ bcftools concat -f files_to_concat.txt -Ob -o merged.bcf
 bcftools index merged.bcf
 ```
+*Note:* Variants are not normalised by agg, meaning occasionally you could see the the same indel with different representations.  Using a normalisation tool such as [vt](https://github.com/atks/vt) on agg output is a good idea.
 
 ####Filtering
 The output from `agg` is very raw, containing all variants called in any sample, whether they passed filter in the single sample gvcfs or not. How exactly to filter these down to a high quality list of variants is a research topic in itself.  A simplistic first pass may involve:
@@ -105,5 +106,3 @@ Genotyping an individual (from their gvcf) who does not have an ALT allele calle
 Multi-allelic annotations for individuals that are ALT in one (or more) of the alleles might be slightly off. Why? Currently DP/GQ are filled from the .dpt file for an individual if they do not have the variant being processed *regardless* of whether they have a different variant at the same position.  This could be solved by buffering all co-occurring variants which is something we are looking at for future versions.
 
 Currently, one should "trust" the annotations where the variant is typed as ALT over ones where they are typed as HOMREF at the same position.
-
-Variants are not normalised by agg, meaning occasionally you could see the the same indel with different representations.  Using a normalisation tool such as [vt](https://github.com/atks/vt) on agg output is a good idea.
