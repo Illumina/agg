@@ -26,6 +26,7 @@ int variantRow::clear() {
     ad[2*i+1]= bcf_int32_missing;
     gq[i]= bcf_int32_missing;
   }
+  return(0);
 }
 
 variantRow::variantRow(int nsample) {
@@ -240,7 +241,6 @@ int aggReader::setDepth() {
       b=var_stop;
       int   var_len=b-a+1;
       float num=0;
-      int pos=0;
       int min_gq = bcf_int32_missing;
       while(it1!=dp_buf[i].end() && it1->stop < a) 
 	it1++;

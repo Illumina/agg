@@ -16,9 +16,8 @@ depthReader::~depthReader() {
 }
 
 int depthReader::next() {
-
   if(gzread(fp,buf,20)) {
-    chrom=buf[0];
+    line.chrom=buf[0];
     line.start=buf[1];
     line.stop=buf[2];
     line.depth=buf[3];
@@ -60,16 +59,18 @@ bcf_hdr_t *depthMerger::makeDepthHeader() {
 
 depthMerger::~depthMerger() {
   bcf_sr_destroy(sr);   
-  delete  _dp_buf_mutex;
+  delete[]  _dp_buf_mutex;
+  delete[] dp_buf;
 }
 
 int depthMerger::setThreads(int nthreads) {
-  _nthreads = nthreads;
+  _nthreads = min(_nsample,nthreads);
   _threads = new pthread_t[_nthreads];
   return(_nthreads);
 }
 
 depthMerger::depthMerger(vector<string> & files) {
+
   _nthreads=1;
   _files = files;
   _eof_warn=false;
@@ -84,7 +85,6 @@ depthMerger::depthMerger(vector<string> & files) {
       exit(1);
     }
   }
-
   cerr << "nsample="<<_nsample<<endl;
   for(int i=0;i<_nsample;i++)  {
     string tmp = files[i];
@@ -92,23 +92,37 @@ depthMerger::depthMerger(vector<string> & files) {
     r.push_back(new depthReader(tmp.c_str()));
   }
   cerr << "opened "<<_nsample<<" .tmp files for merging..."<<endl;    
-  dp_buf.resize(_nsample);
-  for(int i=0;i<_nsample;i++)  {
-    assert(r[i]->next());
-    dp_buf[i].push_back( depthInterval(r[i]->line) );
-    //    cerr <<  i<<": "<<dp_buf[i].front().start << endl;
-  }
-  curr_chrom=r[0]->chrom;
+  dp_buf = new circularBuffer[_nsample];
+  cerr<<"made dp_buf2"<<endl;
+  for(int i=0;i<_nsample;i++) dp_buf[i].resize(buf_size);
+  cerr<<"made dp_buf3"<<endl;
+  
+
+  curr_chrom= -1;
   cur_pos = -1;
   makeDepthHeader();
 }
 
-int depthMerger::findCurrPos() {
+int depthMerger::startNewChromosome() {
+  cerr << "starting new chromosome..."<<endl;
   cur_pos = -1;
+  int prev_chrom=curr_chrom;
+
   for(int i=0;i<_nsample;i++) {    
-    if(!dp_buf[i].empty() && dp_buf[i].front().start < cur_pos)
-      cur_pos = dp_buf[i].front().start;
+    lock(i);
+    while(dp_buf[i].empty())
+      wait_more(i);
+    if(i==0)  {
+      curr_chrom=dp_buf[i].front()->chrom;
+      cur_pos = dp_buf[i].front()->start;    
+    }
+    if(dp_buf[i].front()->start < cur_pos)
+      cur_pos = dp_buf[i].front()->start;    
+    if(dp_buf[i].front()->chrom < curr_chrom && r[i]->open) 
+      curr_chrom=dp_buf[i].front()->chrom;
+    unlock(i);
   }
+  assert(curr_chrom!=prev_chrom);
   cerr << "bcf_hdr_nsamples(_hdr) = "<<bcf_hdr_nsamples(_hdr)<<endl;
   cerr << "chromosome start = " << bcf_hdr_id2name(_hdr,curr_chrom)<<":"<< cur_pos<<endl;
   return(cur_pos);
@@ -123,52 +137,80 @@ void depthMerger::unlockDepthBuffer() {
 }
 
 void depthMerger::fillBuffer(int i) {
+  //  cerr << "filling buffer " << i<<endl;
   assert(i<_nsample);
-  pthread_mutex_lock(&_dp_buf_mutex[i]);
-
-  while(r[i]->chrom>curr_chrom)
-    pthread_cond_wait(&_less,&_dp_buf_mutex[i]);
-  
-  while(r[i]->chrom<=curr_chrom && (dp_buf[i].size() < buf_size || dp_buf[i].back().stop < cur_pos)) {
-    if(r[i]->next() && r[i]->chrom==curr_chrom)
-      dp_buf[i].push_back( depthInterval(r[i]->line));
-    else
-      break;
+  while(!dp_buf[i].full() && r[i]->next())  {
+    assert(    dp_buf[i].push_back( r[i]->line ) );
   }
-  //remove intervals behnd cur_pos
-  while(!dp_buf[i].empty() && dp_buf[i].front().stop < cur_pos)   dp_buf[i].pop_front();
-  pthread_cond_signal(&_more);
-  pthread_mutex_unlock (&_dp_buf_mutex[i]);
+  //  more(i);
+//  cerr << "buffer " << i << " has " <<  dp_buf[i].size()<<endl;
 }
-
 
 typedef struct next_args {
   depthMerger *dm;
   int offset;
 } next_args;
 
-bool depthMerger::anyOpen() {
-  for(int i=0;i<_nsample;i++)
-    if(r[i]->open)
-      return(true);
-  return(false);
+
+void depthMerger::lock(int i) {
+  pthread_mutex_lock(&_dp_buf_mutex[i]);  
+}
+void depthMerger::unlock(int i) {
+  pthread_mutex_unlock(&_dp_buf_mutex[i]);  
+}
+void depthMerger::wait_less(int i) {
+  //  pthread_cond_wait(&_less[0],&_dp_buf_mutex[i]);
+    pthread_cond_wait(&_less[i],&_dp_buf_mutex[i]);
+}
+void depthMerger::wait_more(int i) {
+  pthread_cond_wait(&_more[i],&_dp_buf_mutex[i]);
+}
+
+void depthMerger::more(int i){
+  pthread_cond_signal(&_more[i]);
+}
+
+void depthMerger::less(int i){
+  pthread_cond_signal(&_less[i]);
+  //  pthread_cond_broadcast(&_less[0]);
 }
 
 void *buffer_updater(void *_g) {
   next_args *a = (next_args *)_g;
+  depthMerger *d = a->dm;
+  int nopen=1;
+  cerr << "buffer_updater "<<a->offset<<endl;
+  while(nopen>0) {
+    nopen=0;
+    for(int i=a->offset;i<d->_nsample;i+=d->_nthreads) {
+      d->lock(i);
+      if(d->r[i]->open) nopen++;
 
-  while(a->dm->anyOpen()) {
-    for(int i=a->offset;i<a->dm->_nsample;i+=a->dm->_nthreads)
-      a->dm->fillBuffer(i);
+      while(d->dp_buf[i].full()) {
+	//	cerr << "buffer_updater "<<a->offset<<" is full size="<<d->dp_buf[i].size()<<endl;
+	d->wait_less(i);
+      }
+
+      if(!d->dp_buf[i].full())  {
+	d->fillBuffer(i);
+	d->more(i);
+      }      
+      d->unlock(i);
+    }
   }
+  cerr << "buffer_updater " << a->offset<<" finished"<<endl;
   pthread_exit((void*) 0);
 }
 
 void depthMerger::startReadBuffer() {
   _dp_buf_args = new next_args[_nthreads];
   assert(_nthreads>0);
-  _less = PTHREAD_COND_INITIALIZER;
-  _more = PTHREAD_COND_INITIALIZER;
+  _less = new pthread_cond_t[_nsample];
+  _more = new pthread_cond_t[_nsample];
+  for(int i=0;i<_nsample;i++) {
+    _less[i]=PTHREAD_COND_INITIALIZER;
+    _more[i] = PTHREAD_COND_INITIALIZER;
+  }
   for(int i=0;i<_nthreads;i++) {
     _dp_buf_args[i].dm=this;
     _dp_buf_args[i].offset=i;
@@ -176,82 +218,107 @@ void depthMerger::startReadBuffer() {
   }
 };
 
-bool depthMerger::checkBufferIsOkayToRead() {
-  for(int i=0;i<_nsample;i++) {
-    pthread_mutex_lock (&_dp_buf_mutex[i]);
-    while( r[i]->chrom<curr_chrom | (r[i]->chrom==curr_chrom && dp_buf[i].back().stop<cur_pos) )
-      pthread_cond_wait(&_more, 	&_dp_buf_mutex[i]);
-    pthread_mutex_unlock (&_dp_buf_mutex[i]);
+static void update_buffer(void *_data, long i, int tid) {
+  depthMerger *d = (depthMerger *)_data;
+  d->dp[i]=bcf_int32_missing; //default.
+  d->gq[i]=bcf_int32_missing; //default.
+  int cur_pos=cur_pos;
+  //remove intervals behnd cur_pos
+  while(!d->dp_buf[i].empty() && (d->dp_buf[i].front()->stop < cur_pos || d->dp_buf[i].front()->chrom<d->curr_chrom) )      
+    d->dp_buf[i].pop_front();  
+
+  if(d->dp_buf[i].empty())
+    d->fillBuffer(i);
+
+  if(!d->dp_buf[i].empty() && d->dp_buf[i].front()->start <= cur_pos && d->dp_buf[i].front()->stop >= cur_pos && d->dp_buf[i].front()->chrom == d->curr_chrom){
+    d->dp[i] = d->dp_buf[i].front()->depth;
+    d->gq[i] = d->dp_buf[i].front()->gq;
   }
-  return(true);  
+
 }
 
-
 int depthMerger::next() {
-  lockDepthBuffer();
-  if(cur_pos==-1) findCurrPos();
-  else cur_pos++;
-  unlockDepthBuffer();
-  pthread_cond_signal(&_less);
 
-  checkBufferIsOkayToRead();//wait until buffer is full
-  //  for(int i=0;i<_nsample;i++) fillBuffer(i);
-  
-  for(int i=0;i<_nsample;i++)  {          
-    pthread_mutex_lock (&_dp_buf_mutex[i]);
+  if(cur_pos==-1) {
+    for(int i=0;i<_nsample;i++)       fillBuffer(i);//only needed for single-threaded or kt_for
+    startNewChromosome();
+  }
+  else cur_pos++;
+  assert(cur_pos != -1);
+
+  //  cerr << "next " << bcf_hdr_id2name(_hdr,curr_chrom) <<":"<< cur_pos<<endl;//
+  int n_on_chromosome=0;
+  int nopen=0;
+
+  //kt_for version - slow didnt bother finishing running it
+  // for(int i=0;i<_nsample;i++)
+  //   if( r[i]->open ) 
+  //     nopen++;
+  // kt_for(_nthreads,update_buffer,(void *)this,_nsample);
+
+  // for(int i=0;i<_nsample;i++)
+  //   if(!dp_buf[i].empty() && dp_buf[i].front()->chrom == curr_chrom)
+  //     n_on_chromosome++;    
+
+  //single threaded version - reasonably fast. 90 seconds with 8 threaded bgzip compression.
+  for(int i=0;i<_nsample;i++)  {              
+    if( r[i]->open ) 
+      nopen++;
+
     dp[i]=bcf_int32_missing; //default.
     gq[i]=bcf_int32_missing; //default.
-    if(!dp_buf[i].empty() && dp_buf[i].front().start <= cur_pos && dp_buf[i].front().stop >= cur_pos){
-      dp[i] = dp_buf[i].front().depth;
-      gq[i] = dp_buf[i].front().gq;
+    //remove intervals behnd cur_pos
+    while(!dp_buf[i].empty() && (dp_buf[i].front()->stop < cur_pos || dp_buf[i].front()->chrom<curr_chrom) )      
+      dp_buf[i].pop_front();  
+
+    // i is behind cur_pos. needs data.
+    if(dp_buf[i].empty())
+      fillBuffer(i);
+
+    if(!dp_buf[i].empty() && dp_buf[i].front()->start <= cur_pos && dp_buf[i].front()->stop >= cur_pos && dp_buf[i].front()->chrom == curr_chrom){
+      dp[i] = dp_buf[i].front()->depth;
+      gq[i] = dp_buf[i].front()->gq;
     }
-    pthread_mutex_unlock(&_dp_buf_mutex[i]);
+    if(!dp_buf[i].empty() && dp_buf[i].front()->chrom == curr_chrom)
+      n_on_chromosome++;    
   }
 
-  //check if we have reached end of chromosome
-  bool all_empty=true;
-  for(int i=0;i<_nsample;i++)
-    if(!dp_buf[i].empty()||(r[i]->chrom==curr_chrom && r[i]->open))
-      all_empty=false;
+  //producer-consumer implementation. unmitigated disaster. 320 seconds using 16 threads. nthreads must equal nsample or you get a race condition.
+  // for(int i=0;i<_nsample;i++)  {              
+  //   lock(i);
+  //   if( r[i]->open )       nopen++;
+
+  //   dp[i]=bcf_int32_missing; //default.
+  //   gq[i]=bcf_int32_missing; //default.
+  //   //remove intervals behnd cur_pos
+  //   while(!dp_buf[i].empty() && (dp_buf[i].front()->stop < cur_pos || dp_buf[i].front()->chrom<curr_chrom) )      
+  //     dp_buf[i].pop_front();  
+  //   less(i);
+    
+  //   // i is behind cur_pos. needs data.
+  //   while(dp_buf[i].empty())
+  //     wait_more(i);
+
+  //   if(!dp_buf[i].empty() && dp_buf[i].front()->start <= cur_pos && dp_buf[i].front()->stop >= cur_pos && dp_buf[i].front()->chrom == curr_chrom){
+  //     dp[i] = dp_buf[i].front()->depth;
+  //     gq[i] = dp_buf[i].front()->gq;
+  //   }
+  //   if(!dp_buf[i].empty() && dp_buf[i].front()->chrom == curr_chrom)
+  //     n_on_chromosome++;    
+  //   unlock(i);
+  // }
+
+  //all done.
+  if(nopen==0)    
+    return(0);
 
   //if chromosome is finished, move to next one
-  if(all_empty) {
-    cerr << "ALL EMPTY cur_pos="<<cur_pos+1<<endl;
-    for(int i=0;i<_nsample;i++)
-      cerr<< r[i]->chrom << "/" << r[i]->open << " ";
-    cerr <<endl;
-    
-    int nopen=0;
-    for(int i=0;i<_nsample;i++)
-      if(r[i]->open)
-	nopen++;
-
-    if(nopen==0) 
-      return(0);
+  if(n_on_chromosome==0) {
+    cur_pos = -1;
     cerr << "chromosome end   = " << bcf_hdr_id2name(_hdr,curr_chrom) <<":"<< cur_pos<<endl;//
-
-    //sweeps for the new chrom (one with the smallest index)
-    int prev_chrom=curr_chrom;
-    curr_chrom=r[0]->chrom;
-    for(int i=1;i<_nsample;i++) 
-      if(r[i]->chrom < curr_chrom && r[i]->open) 
-	curr_chrom=r[i]->chrom;
-    assert(curr_chrom!=prev_chrom);
-    for(int i=0;i<_nsample;i++)  {
-      if(r[i]->open)  {
-	if(r[i]->chrom == curr_chrom)
-	  dp_buf[i].push_back( depthInterval(r[i]->line));
-      }
-      else {
-	if(!_eof_warn) {
-	  cerr << "WARNING: " << _files[i] << " is finished but "<<nopen<<" .tmp files claim to have more data!"<<endl;
-	  _eof_warn=true;
-	}
-      }
-    }
-    cur_pos=-1;
     return(next());
   }
+
   return(1);
 }
 
@@ -330,11 +397,12 @@ void *consumer_func(void *ptr) {
 
 
 int depthMerger::writeDepthMatrix(const char *output_file) {
-  startReadBuffer(); 
+
   pthread_t consumer;
   pthread_t producer;
 
   cerr << "Writing out "<<output_file<<endl;
+
   dp = new int32_t[_nsample];
   gq = new int32_t[_nsample];
 
@@ -349,21 +417,41 @@ int depthMerger::writeDepthMatrix(const char *output_file) {
   ta.dm=this;
   ta.out_fh =   hts_open(output_file,"wb9");
   //  htsFile *out_fh = ta.out_fh;
-  if(_nthreads>0)  hts_set_threads(ta.out_fh,max(_nthreads/2,1) );
+  if(_nthreads>0)  
+    hts_set_threads(ta.out_fh,max(_nthreads,1) );
   bcf_hdr_write(ta.out_fh, _hdr);
   ta.less = PTHREAD_COND_INITIALIZER;
   ta.more = PTHREAD_COND_INITIALIZER;
+  cerr << "debug1"<<endl;
+  //  startReadBuffer(); 
 
+  // while(next()) {
+  //   bcf1_t* line =  ta.buf[0];
+  //   line->rid = getCurChr();
+  //   line->pos = getCurPos();
+  //   if(cur_pos%1000000==0)
+  //     cerr << "writing "<<    line->pos+1 << endl;
+  //   bcf_update_alleles_str(_hdr, line, "N,.");
+  //   bcf_update_format_int32(_hdr, line,"DP",dp,_nsample);
+  //   bcf_update_format_int32(_hdr, line,"GQ",gq,_nsample);      
+  //   bcf_write1(ta.out_fh, _hdr, line);
+  //   bcf_clear1(line);
+  // }
+
+  cerr << "debug2"<<endl;
   pthread_create(&producer, NULL, producer_func, (void *)&ta);
   pthread_create(&consumer, NULL, consumer_func, (void *)&ta);
+  cerr << "debug3"<<endl;
   pthread_join(producer, NULL);
   pthread_join(consumer, NULL);
 
+  cerr << "debug4"<<endl;
   cerr << "finished."<<endl;
   hts_close(ta.out_fh);
   bcf_hdr_destroy(_hdr);
   delete[] dp;
   delete[] gq;
+
   return(0);
 }
 

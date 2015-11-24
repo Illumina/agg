@@ -85,14 +85,16 @@ int merge_main(int argc,char **argv) {
   }
   cerr << file_list.size() << " files to merge"<<endl;
   //  for(vector<string>::iterator it1=file_list.begin();it1!=file_list.end();it1++)    cerr << *it1<<endl;
-
   char *dp_out_fname=(char *)malloc(strlen(output)+5);
   strcat(strcpy(dp_out_fname,output),".dpt");
+
+
   depthMerger d(file_list);
   d.setThreads(n_threads);
   d.writeDepthMatrix(dp_out_fname);
   cerr << "Indexing " <<dp_out_fname<<endl;
   bcf_index_build(dp_out_fname, BCF_LIDX_SHIFT);
+  return(0);
 
   char *output_bcf=(char *)malloc(strlen(output)+5);  strcat(strcpy(output_bcf,output),".bcf");
   cerr << "Merging variants..." <<output_bcf<<endl;
@@ -100,9 +102,5 @@ int merge_main(int argc,char **argv) {
   output_bcf=(char *)malloc(strlen(output)+5);  strcat(strcpy(output_bcf,output),".bcf");
   cerr << "Indexing " <<output_bcf<<endl;
   bcf_index_build(output_bcf, BCF_LIDX_SHIFT);
-
-
   return(0);
 }
-
-
