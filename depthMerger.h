@@ -29,83 +29,34 @@ struct depthInterval {
 
 class depthReader {
  public:
-  depthReader(const char *depth_fname);
-  ~depthReader();
-  int next();
+
+  depthReader() { _open=false; }
+  depthReader(const char *depth_fname) {       open(depth_fname) ;  }
+  ~depthReader() {  gzclose(_fp);}
+  void open(const char *depth_fname);
+  bool next();
+  int getDepth() {return(_buf[3]);}
+  int getGQ() {return(_buf[4]);}
+  int getChrom() {return(_buf[0]);}
+  int getPos() {return(_buf[1]);}
+  bool isAhead(int rid,int pos)  { if(_open) return(_buf[0]>rid || (_buf[0]==rid && _buf[1]>pos)) ; else return(false);}
+  bool isBehind(int rid,int pos) { if(_open) return(_buf[0]<rid || (_buf[0]==rid && _buf[2]<pos)) ; else return(false);}
+  bool contains(int rid,int pos) { if(_open) return(_buf[0]==rid && _buf[1]<= pos && _buf[2]>=pos); else return(false);}
+  bool isOpen() {return _open;}
   int nread,nsample;
-  depthInterval line;
-  bool open;
  private:
-  gzFile fp;
-  int buf[5];
+  gzFile _fp;
+  int _buf[5];
+  depthInterval _line;
+  bool _open;
 };
-
-class circularBuffer {
- public:
-
-  circularBuffer() {
-    resize(0);
-  }
-
-  circularBuffer(int buffer_size) {
-    resize(buffer_size);
-  }
-
-  void resize(int buffer_size) {
-    _bufsize=buffer_size;
-    _offset=_bufn=0;
-    _buf = new depthInterval[_bufsize];
-    //_buf.resize(_bufsize);
-  }
-
-  ~circularBuffer() {    delete[] _buf;  }
-
-  int size() {    return(_bufn);  }
-  bool  empty() {    return(_bufn==0);  }
-  bool  full() {    return(_bufn==_bufsize);  }
-
-  bool push_back(depthInterval o) {
-    int idx=(_offset + _bufn)%_bufsize;
-    //    cerr << "push_back " << _offset << " " <<_bufn<<" "<<idx<<" "<<endl;
-    assert(idx<_bufsize&&idx>=0);
-    if(_bufn<_bufsize) _buf[idx]=o;
-    else die("buffer overflow");
-    _bufn++;
-    return(true);
-  }
-
-  depthInterval *front() { 
-    assert(_bufn>0);
-    assert(_offset>=0 && _offset<_bufsize);      
-    return(&_buf[_offset]);
-  }
-
-  depthInterval *back() { 
-    assert(_bufn>0);
-    return(&_buf[(_offset+_bufn-1)%_bufsize]);
-  }
-
-  void pop_front() {
-    if(_bufn>0) {
-      _offset++;
-      _offset %= _bufsize;
-      _bufn--;
-    }
-    else 
-      die("buffer empty (pop_front)");
-  }
- private:
-  //  vector<depthInterval> _buf;
-  depthInterval *_buf;
-  int _bufsize,_offset,_bufn;  
-};
-
 
 class depthMerger {
  public:
   int _nsample;
   int32_t *dp,*gq;
   depthMerger(vector<string> & files);
+  depthMerger();
   ~depthMerger();
   int writeDepthMatrix(const char *output_file);
   int next();
@@ -129,11 +80,9 @@ class depthMerger {
   pthread_t *_threads;
   const static  int buf_size=1000;
 
-  int cur_pos;
-  int curr_chrom;
+  int _cur_pos, _cur_chr;
   //  vector< deque< depthInterval > > dp_buf;//stores the depth intervals for nsamples.
-  circularBuffer *dp_buf;//stores the depth intervals for nsamples.  
-  vector< depthReader* > r;
+  depthReader* _dp_rdr;
   bcf_srs_t *sr;
   vector<string> _files;
   bcf_hdr_t *_hdr;
