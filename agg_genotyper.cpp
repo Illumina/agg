@@ -478,7 +478,7 @@ void aggReader::annotate_line() {
     die("problem with genotyping at "+to_string(static_cast<long long>(out_line->pos+1)));
   }
 
-  if(i_pf>0.0 && nalt>0)  pf/=nalt;
+  if(pf>0.0 && nalt>0)  pf/=nalt;
   bcf_update_info_int32(out_hdr, out_line, "AN", &an, 1);
   bcf_update_info_int32(out_hdr, out_line, "AC", &ac, 1);
   bcf_update_info_float(out_hdr, out_line, "PF", &pf, 1);
