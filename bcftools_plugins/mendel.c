@@ -204,6 +204,22 @@ int mendel_main(bcf1_t *rec, bcf_hdr_t *hdr) {
 	  gt[pmap[ped.mumidx[i]]*2]  = bcf_gt_phased(mt);
 	  gt[pmap[ped.mumidx[i]]*2+1] = bcf_gt_phased(mu);
 	}
+	if(k==2&&m==2&&d==2) {
+	  gt[pmap[i]*2] = bcf_gt_phased(1);
+	  gt[pmap[i]*2+1]= bcf_gt_phased(1);
+	  gt[pmap[ped.dadidx[i]]*2] = bcf_gt_phased(1);
+	  gt[pmap[ped.dadidx[i]]*2+1] = bcf_gt_phased(1);
+	  gt[pmap[ped.mumidx[i]]*2]  = bcf_gt_phased(1);
+	  gt[pmap[ped.mumidx[i]]*2+1] = bcf_gt_phased(1);	  
+	}
+	if(k==0&&m==0&&d==0) {
+	  gt[pmap[i]*2] = bcf_gt_phased(0);
+	  gt[pmap[i]*2+1]= bcf_gt_phased(0);
+	  gt[pmap[ped.dadidx[i]]*2] = bcf_gt_phased(0);
+	  gt[pmap[ped.dadidx[i]]*2+1] = bcf_gt_phased(0);
+	  gt[pmap[ped.mumidx[i]]*2]  = bcf_gt_phased(0);
+	  gt[pmap[ped.mumidx[i]]*2+1] = bcf_gt_phased(0);	  
+	}
       }
     }
   }
