@@ -413,7 +413,7 @@ int depthMerger::writeDepthMatrix(const char *output_file) {
   bcf_hdr_write(ta.out_fh, _hdr);
   ta.less = PTHREAD_COND_INITIALIZER;
   ta.more = PTHREAD_COND_INITIALIZER;
-  cerr << "debug1"<<endl;
+
 #if THREADED==1
   startReadBuffer(); 
 #endif
@@ -422,14 +422,14 @@ int depthMerger::writeDepthMatrix(const char *output_file) {
   while(next()) {
     line->rid = getCurChr();
     line->pos = getCurPos();
-    if(_cur_pos%1000000==0)
-      cerr << "writing "<<    line->pos+1 << endl;
+    if(line->pos%1000000==0)        
+      cerr<<bcf_hdr_id2name(_hdr,line->rid)<<":"<<line->pos+1<<endl;    
+
     bcf_update_alleles_str(_hdr, line, "N,.");
     bcf_update_format_int32(_hdr, line,"DP",dp,_nsample);
     bcf_update_format_int32(_hdr, line,"GQ",gq,_nsample);      
     bcf_write1(ta.out_fh, _hdr, line);
     bcf_clear1(line);
-    //    exit(1);
   }
 
   // cerr << "debug2"<<endl;
@@ -441,8 +441,8 @@ int depthMerger::writeDepthMatrix(const char *output_file) {
   // pthread_join(producer, NULL);
   // pthread_join(consumer, NULL);
 
-  cerr << "debug4"<<endl;
-  cerr << "finished."<<endl;
+
+  cerr << "finished creating dpt file"<<endl;
   hts_close(ta.out_fh);
   bcf_hdr_destroy(_hdr);
   delete[] dp;
