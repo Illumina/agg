@@ -1,5 +1,5 @@
 2015-11-26
-*added the update-info.c plugin
+*added the update-info.c plugin and a new AN/AC plugin
 *minor bugfix when calculating INFO/PF with agg genotype
 
 2015-11-19

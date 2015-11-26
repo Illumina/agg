@@ -47,11 +47,10 @@ int read_pedigree(char *fname,pedigree *p) {
   FILE *fp = fopen(fname,"r"); 
   int i,j,count1,count2;
   p->n=0;
-  if( fp == NULL )
-    {
+  if( fp == NULL )    {
       fprintf(stderr,"Error while opening %s.\n",fname);
       exit(-1);
-    }
+  }
   while( fgets(line,maxl, fp) !=NULL) {
     //    fprintf(stderr,"%d %s",p->n,line);
     p->n++;
@@ -237,7 +236,7 @@ const char *about(void)
 
 char *usage(void)
 {
-  return "guess\n";
+  return "mendel phases, flags mendel inconsistencies and nominal denovos\n";
 }
 
 int init(int argc, char **argv, bcf_hdr_t *in, bcf_hdr_t *out)
