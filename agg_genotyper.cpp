@@ -6,8 +6,8 @@ int fillHeader(bcf_hdr_t *hdr) {//fills in the standard stuff for an agg header.
 
   bcf_hdr_append(hdr, "##source=agg");
   bcf_hdr_append(hdr, "##INFO=<ID=PF,Number=A,Type=Float,Description=\"proportion of genotypes containing an ALT that passed the original single sample gvcf filter\">");
-  bcf_hdr_append(hdr, "##INFO=<ID=GN,Number=G,Type=Integer,Description=\"count of each genotype.\">"); //todo.
-  bcf_hdr_append(hdr, "##INFO=<ID=AD,Number=R,Type=Integer,Description=\"sum of allele depths for ALL individuals\">"); //todo.
+  bcf_hdr_append(hdr, "##INFO=<ID=GN,Number=G,Type=Integer,Description=\"count of each genotype.\">"); 
+  bcf_hdr_append(hdr, "##INFO=<ID=AD,Number=R,Type=Integer,Description=\"sum of allele depths for ALL individuals\">"); 
   bcf_hdr_append(hdr, "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"sum of depth  across all samples\">");
   bcf_hdr_append(hdr, "##INFO=<ID=AC,Number=A,Type=Integer,Description=\"Allele count in genotypes\">");
   bcf_hdr_append(hdr, "##INFO=<ID=AN,Number=1,Type=Integer,Description=\"Total number of alleles in called genotypes\">");
@@ -478,7 +478,7 @@ void aggReader::annotate_line() {
     die("problem with genotyping at "+to_string(static_cast<long long>(out_line->pos+1)));
   }
 
-  pf/=nalt;
+  if(pf>0.0 && nalt>0)  pf/=nalt;
   bcf_update_info_int32(out_hdr, out_line, "AN", &an, 1);
   bcf_update_info_int32(out_hdr, out_line, "AC", &ac, 1);
   bcf_update_info_float(out_hdr, out_line, "PF", &pf, 1);
