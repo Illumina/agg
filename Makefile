@@ -53,3 +53,4 @@ agg: agg.cpp vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_
 all:  $(ALL)
 clean:
 	rm -rf *.o $(ALL) version.h
+
