@@ -6,7 +6,8 @@ int main(int argc, char **argv) {
 
 
   if(argc < 2) {
-    cerr << "\nProgram:\tagg " << VERSION << " (aggregation tool for multiple samples)" << endl;
+    cerr << "\nProgram:\tagg (aggregation tool for multiple gvcfs)" << endl;
+    cerr << "Version:\t" << VERSION <<endl;
     cerr << "Contact:\tjoconnell@illumina.com\n" << endl;
     cerr << "Copyright (c) 2015, Illumina, Inc. All rights reserved. See LICENSE for further details.\n"<<endl;
     cerr << "Usage:\tagg <command> [options]\n" << endl;

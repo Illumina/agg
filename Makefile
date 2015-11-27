@@ -17,10 +17,18 @@ LFLAGS = -lz -lpthread -lm -ldl
 ALLFLAGS =  $(IFLAGS) 
 CXX_FLAGS = -std=c++0x -Wno-write-strings
 
+
+GIT_HASH := $(shell git describe --abbrev=4 --always )
+
+VERSION = 0.2.0
+GIT_VERSION =
+ifneq "$(wildcard .git)" ""
+GIT_VERSION = -$(shell git describe --always)
+endif
+version.h:
+	echo '#define VERSION "$(VERSION)$(GIT_VERSION)"' > $@
+
 ##agg source code
-version.h: 
-	git log --pretty=format:'#define VERSION "%h"' -n 1 > version.h
-	echo >> version.h
 utils.o: utils.cpp utils.h
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c utils.cpp 
 agg_genotyper.o: agg_genotyper.cpp agg_genotyper.h
@@ -45,4 +53,4 @@ agg: agg.cpp vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_
 #housekeeping
 all:  $(ALL)
 clean:
-	rm -rf *.o $(ALL)
+	rm -rf *.o $(ALL) version.h
