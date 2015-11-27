@@ -21,12 +21,11 @@ CXX_FLAGS = -std=c++0x -Wno-write-strings
 GIT_HASH := $(shell git describe --abbrev=4 --always )
 
 VERSION = 0.3.0
-GIT_VERSION =
 ifneq "$(wildcard .git)" ""
-GIT_VERSION = -$(shell git describe --always)
+VERSION = $(shell git describe --always)
 endif
 version.h:
-	echo '#define VERSION "$(VERSION)$(GIT_VERSION)"' > $@
+	echo '#define VERSION "$(VERSION)"' > $@
 
 ##agg source code
 utils.o: utils.cpp utils.h
