@@ -20,7 +20,7 @@ CXX_FLAGS = -std=c++0x -Wno-write-strings
 
 GIT_HASH := $(shell git describe --abbrev=4 --always )
 
-VERSION = 0.2.9
+VERSION = 0.3.0
 GIT_VERSION =
 ifneq "$(wildcard .git)" ""
 GIT_VERSION = -$(shell git describe --always)
@@ -31,13 +31,13 @@ version.h:
 ##agg source code
 utils.o: utils.cpp utils.h
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c utils.cpp 
-agg_genotyper.o: agg_genotyper.cpp agg_genotyper.h
+agg_genotyper.o: agg_genotyper.cpp agg_genotyper.h version.h
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c agg_genotyper.cpp  
 agg_utils.o: agg_utils.cpp agg.h 
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $< 
-agg_ingest2.o: agg_ingest2.cpp agg.h 
+agg_ingest2.o: agg_ingest2.cpp agg.h version.h
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $<  
-agg_ingest1.o: agg_ingest1.cpp agg_ingest1.h agg.h
+agg_ingest1.o: agg_ingest1.cpp agg_ingest1.h agg.h version.h
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $<  
 ##these files were taken from bcftools hence compiled as straight C
 vcfmerge.o: vcfmerge.c 

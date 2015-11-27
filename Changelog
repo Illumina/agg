@@ -1,6 +1,11 @@
+2015-11-27
+*disabled hemizygous warnings
+*cleaned up versioning
+*cleaned up the header for agg genotype output
+
 2015-11-26
 *added the update-info.c plugin and a new AN/AC plugin
-*minor bugfix when calculating INFO/PF with agg genotype
+*minor bugfix when calculating INFO/PF with agg genotype (nan when no ALT present)
 
 2015-11-19
 *updatePF.c bug fix

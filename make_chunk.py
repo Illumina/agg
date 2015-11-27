@@ -65,7 +65,7 @@ if __name__ == "__main__":
         cmd = "%s ingest2 -l %s -@%d -o %s"%(args.agg,"%s/ingest1.txt"%tmp_dir,args.nprocess,args.output)
         sys.stderr.write(cmd+"\n")
         subprocess.call(cmd,shell=True)
-        sys.stderr.write("took %f seconds\n"%(time.time()-time0))
+        sys.stderr.write("ingest2 took %f seconds\n"%(time.time()-time0))
         shutil.rmtree(tmp_dir)
     except:
         sys.stderr.write("there was a problem. removing temporary files and exiting")
