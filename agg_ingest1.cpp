@@ -90,31 +90,38 @@ int ingest1(const char *input,const char*output) {
   }
   printf("variants: %s\n",out_fname);
   htsFile *variant_fp=hts_open(out_fname,"wb1");
-
-
+  if(variant_fp==NULL) {
+    fprintf(stderr,"problem opening %s\n",input);
+    exit(1);    
+  }
 
   bcf1_t *bcf_rec = bcf_init();
   ks = ks_init(fp);
   htsFile *hfp=hts_open(input, "r");
-  bcf_hdr_t *hdr =  bcf_hdr_read(hfp);
-  args_t *norm_args = init_vcfnorm(hdr);
-
-
+  bcf_hdr_t *hdr_in =  bcf_hdr_read(hfp);
+  hts_close(hfp);
   //this is a hack to fix broken gvcfs where AD is incorrectly defined in the header.
-  bcf_hdr_remove(hdr,BCF_HL_FMT,"AD");
-  assert(  bcf_hdr_append(hdr,"##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed. For indels this value only includes reads which confidently support each allele (posterior prob 0.999 or higher that read contains indicated allele vs all other intersecting indel alleles)\">") == 0);
-
+  bcf_hdr_remove(hdr_in,BCF_HL_FMT,"AD");
+  assert(  bcf_hdr_append(hdr_in,"##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed. For indels this value only includes reads which confidently support each allele (posterior prob 0.999 or higher that read contains indicated allele vs all other intersecting indel alleles)\">") == 0);
 
   //this is a hack to fix broken gvcfs where GQ is incorrectly labelled as float (v4.3 spec says it should be integer)
-  bcf_hdr_remove(hdr,BCF_HL_FMT,"GQ");
-  assert(  bcf_hdr_append(hdr,"##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">") == 0);
+  bcf_hdr_remove(hdr_in,BCF_HL_FMT,"GQ");
+  assert(  bcf_hdr_append(hdr_in,"##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">") == 0);
+
+
+  //  bcf_hdr_t  *hdr_out=hdr_in;
+  bcf_hdr_t *hdr_out =  bcf_hdr_init("w");
+  hdr_out=bcf_hdr_dup(hdr_in);
+  remove_hdr_lines(hdr_out,BCF_HL_INFO);
+  remove_hdr_lines(hdr_out,BCF_HL_FLT);
+  bcf_hdr_sync(hdr_out);
 
   //here we add FORMAT/PF. which is the pass filter flag for alts.
-  assert(  bcf_hdr_append(hdr,"##FORMAT=<ID=PF,Number=A,Type=Integer,Description=\"variant was PASS filter in original sample gvcf\">") == 0);
+  assert(  bcf_hdr_append(hdr_out,"##FORMAT=<ID=PF,Number=A,Type=Integer,Description=\"variant was PASS filter in original sample gvcf\">") == 0);
 
+  args_t *norm_args = init_vcfnorm(hdr_out);
 
-
-  bcf_hdr_write(variant_fp, hdr);
+  bcf_hdr_write(variant_fp, hdr_out);
   kstring_t work1 = {0,0,0};            
   int buf[5];
   ks_tokaux_t aux;
@@ -125,7 +132,7 @@ int ingest1(const char *input,const char*output) {
       ptr = kstrtok(NULL,NULL,&aux);//pos
       work1.l=0;
       kputsn(str.s,ptr-str.s-1, &work1);   
-      buf[0] =  bcf_hdr_name2id(hdr, work1.s);
+      buf[0] =  bcf_hdr_name2id(hdr_in, work1.s);
       assert(      buf[0]>=0);
       buf[1]=atoi(ptr)-1;
       for(int i=0;i<3;i++)  ptr = kstrtok(NULL,NULL,&aux);// gets us to ALT
@@ -162,35 +169,35 @@ int ingest1(const char *input,const char*output) {
 	  die("ERROR: problem writing "+(string)out_fname+".tmp");
       }
       if(is_variant) {//wass this a variant? if so write it out to the bcf
-	vcf_parse(&str,hdr,bcf_rec);
+	vcf_parse(&str,hdr_in,bcf_rec);
 
-	int32_t pass = bcf_has_filter(hdr, bcf_rec, ".");
-	bcf_update_format_int32(hdr,bcf_rec,"PF",&pass,1);
-	bcf_update_filter(hdr,bcf_rec,NULL,0);
+	int32_t pass = bcf_has_filter(hdr_in, bcf_rec, ".");
+	bcf_update_format_int32(hdr_out,bcf_rec,"PF",&pass,1);
+	bcf_update_filter(hdr_out,bcf_rec,NULL,0);
 	if(bcf_rec->n_allele>2) {//split multi-allelics (using vcfnorm.c from bcftools1.2)
 	  split_multiallelic_to_biallelics(norm_args,bcf_rec );
 	  for(int i=0;i<norm_args->ntmp_lines;i++){
 	    remove_info(norm_args->tmp_lines[i]);
-	    bcf_write1(variant_fp, hdr, norm_args->tmp_lines[i]);
+	    bcf_write1(variant_fp, hdr_out, norm_args->tmp_lines[i]);
 	  }
 	}
 	else {
 	  remove_info(bcf_rec);
-	  bcf_write1(variant_fp, hdr, bcf_rec) ;
+	  bcf_write1(variant_fp, hdr_out, bcf_rec) ;
 	}
 	//	fprintf(stderr,"%s\n",str.s);
       }
 
     }
   }
-  bcf_hdr_destroy(hdr);
+  bcf_hdr_destroy(hdr_in);
+  bcf_hdr_destroy(hdr_out);
 
   ks_destroy(ks);
   gzclose(fp);
   gzclose(depth_fp);  
   free(str.s);
   free(work1.s);
-  hts_close(hfp);
   hts_close(variant_fp);
 
   fprintf(stderr,"Indexing %s\n",out_fname);

@@ -1,3 +1,7 @@
+2015-11-28
+*minor ingest1 change. all INFO fields are removed from the header. protects against bad annotations
+
+
 2015-11-27
 *disabled hemizygous warnings
 *cleaned up versioning
