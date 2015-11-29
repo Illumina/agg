@@ -4,6 +4,8 @@
 #include <map>
 #include <getopt.h>
 #include <vector>
+#include "version.h"
+
 
 #include "utils.h"
 #define BCF_LIDX_SHIFT    14

@@ -46,7 +46,8 @@ if __name__ == "__main__":
             subprocess.check_output(cmd,shell=True)
             return(tmp_out+".bcf")
         except:
-            raise Exception("problem running agg on %s\n"%f)
+            sys.stderr.write("WARNING: Problem processing %s. Will not be included"%f)
+            return None
 
     try:
         time0=time.time()
@@ -56,7 +57,7 @@ if __name__ == "__main__":
         sys.stderr.write("ingest1 took %f seconds\n"%(time.time()-time0))
         output_files.sort()
         fout = open("%s/ingest1.txt"%tmp_dir,"wb")
-        fout.write("\n".join(output_files))
+        fout.write("\n".join([val for val in output_files if val!=None]))
         del fout
         ##concatenate the final chunks into our database
         time0=time.time()
@@ -64,7 +65,7 @@ if __name__ == "__main__":
         cmd = "%s ingest2 -l %s -@%d -o %s"%(args.agg,"%s/ingest1.txt"%tmp_dir,args.nprocess,args.output)
         sys.stderr.write(cmd+"\n")
         subprocess.call(cmd,shell=True)
-        sys.stderr.write("took %f seconds\n"%(time.time()-time0))
+        sys.stderr.write("ingest2 took %f seconds\n"%(time.time()-time0))
         shutil.rmtree(tmp_dir)
     except:
         sys.stderr.write("there was a problem. removing temporary files and exiting")

@@ -47,11 +47,10 @@ int read_pedigree(char *fname,pedigree *p) {
   FILE *fp = fopen(fname,"r"); 
   int i,j,count1,count2;
   p->n=0;
-  if( fp == NULL )
-    {
+  if( fp == NULL )    {
       fprintf(stderr,"Error while opening %s.\n",fname);
       exit(-1);
-    }
+  }
   while( fgets(line,maxl, fp) !=NULL) {
     //    fprintf(stderr,"%d %s",p->n,line);
     p->n++;
@@ -204,6 +203,22 @@ int mendel_main(bcf1_t *rec, bcf_hdr_t *hdr) {
 	  gt[pmap[ped.mumidx[i]]*2]  = bcf_gt_phased(mt);
 	  gt[pmap[ped.mumidx[i]]*2+1] = bcf_gt_phased(mu);
 	}
+	if(k==2&&m==2&&d==2) {
+	  gt[pmap[i]*2] = bcf_gt_phased(1);
+	  gt[pmap[i]*2+1]= bcf_gt_phased(1);
+	  gt[pmap[ped.dadidx[i]]*2] = bcf_gt_phased(1);
+	  gt[pmap[ped.dadidx[i]]*2+1] = bcf_gt_phased(1);
+	  gt[pmap[ped.mumidx[i]]*2]  = bcf_gt_phased(1);
+	  gt[pmap[ped.mumidx[i]]*2+1] = bcf_gt_phased(1);	  
+	}
+	if(k==0&&m==0&&d==0) {
+	  gt[pmap[i]*2] = bcf_gt_phased(0);
+	  gt[pmap[i]*2+1]= bcf_gt_phased(0);
+	  gt[pmap[ped.dadidx[i]]*2] = bcf_gt_phased(0);
+	  gt[pmap[ped.dadidx[i]]*2+1] = bcf_gt_phased(0);
+	  gt[pmap[ped.mumidx[i]]*2]  = bcf_gt_phased(0);
+	  gt[pmap[ped.mumidx[i]]*2+1] = bcf_gt_phased(0);	  
+	}
       }
     }
   }
@@ -221,7 +236,7 @@ const char *about(void)
 
 char *usage(void)
 {
-  return "guess\n";
+  return "mendel phases, flags mendel inconsistencies and nominal denovos\n";
 }
 
 int init(int argc, char **argv, bcf_hdr_t *in, bcf_hdr_t *out)

@@ -4,14 +4,18 @@
 
 int fillHeader(bcf_hdr_t *hdr) {//fills in the standard stuff for an agg header.
 
-  bcf_hdr_append(hdr, "##source=agg");
-  bcf_hdr_append(hdr, "##INFO=<ID=PF,Number=1,Type=Float,Description=\"proport of genotypes containing an ALT that passed the original single sample gvcf filter\">");
-  bcf_hdr_append(hdr, "##INFO=<ID=GN,Number=G,Type=Integer,Description=\"count of each genotype.\">"); //todo.
-  bcf_hdr_append(hdr, "##INFO=<ID=AD,Number=R,Type=Integer,Description=\"sum of allele depths for ALL individuals\">"); //todo.
+  bcf_hdr_append(hdr, ((string)"##source=agg "+VERSION).c_str());
+  bcf_hdr_append(hdr, "##INFO=<ID=PF,Number=A,Type=Float,Description=\"proportion of genotypes containing an ALT that passed the original single sample gvcf filter\">");
+  bcf_hdr_append(hdr, "##INFO=<ID=GN,Number=G,Type=Integer,Description=\"count of each genotype.\">"); 
+  bcf_hdr_append(hdr, "##INFO=<ID=AD,Number=R,Type=Integer,Description=\"sum of allele depths for ALL individuals\">"); 
   bcf_hdr_append(hdr, "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"sum of depth  across all samples\">");
   bcf_hdr_append(hdr, "##INFO=<ID=AC,Number=A,Type=Integer,Description=\"Allele count in genotypes\">");
   bcf_hdr_append(hdr, "##INFO=<ID=AN,Number=1,Type=Integer,Description=\"Total number of alleles in called genotypes\">");
-
+  bcf_hdr_append(hdr, "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
+  bcf_hdr_append(hdr, "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Filtered basecall depth used for site genotyping\">");
+  bcf_hdr_append(hdr, "##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed.\">");
+  bcf_hdr_append(hdr, "##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">");
+  bcf_hdr_append(hdr, "##FORMAT=<ID=PF,Number=A,Type=Integer,Description=\"variant was PASS filter in original sample gvcf\">");
   return(0);
 }
 
@@ -287,7 +291,7 @@ int aggReader::next() {
 	  while(dp_chr!=cur_chr)   	    moveDepthForward();
 	  if(line_count>0)
 	    cerr <<line_count<<" variants genotyped." <<endl;
-	  cerr << "Genotyping contig " << bcf_hdr_int2id(var_rdr->readers[i].header,BCF_DT_CTG,cur_chr)<<endl;
+
 	  if(DEBUG>0) {
 	    cerr << "rid = "<<cur_chr<<" ("<<	  bcf_hdr_int2id(var_rdr->readers[i].header,BCF_DT_CTG,cur_chr)<<")"<<endl;
 	    cerr << "dp_chr = "<<dp_chr<<"    dp_pos = "<< dp_pos<<endl;
@@ -352,7 +356,7 @@ int aggReader::next() {
 
 	if(ngt_read==ntmp) {//this is a hack to deal with sites where everyone has been made haploid.
 	  int *work =  new int[ntmp];
-	  cerr << "WARNING: position "<< line[i]->pos+1 <<" had an all-haploid site, this can be caused by gvcf hemizygous rules"<<endl;
+	  //	  cerr << "WARNING: position "<< line[i]->pos+1 <<" had an all-haploid site, this can be caused by gvcf hemizygous rules"<<endl;
 	  for(int j=0;j<ntmp;j++)  
 	    work[j]=gt[j];
 	  for(int j=0;j<ntmp;j++){
@@ -478,7 +482,7 @@ void aggReader::annotate_line() {
     die("problem with genotyping at "+to_string(static_cast<long long>(out_line->pos+1)));
   }
 
-  pf/=nalt;
+  if(pf>0.0 && nalt>0)  pf/=nalt;
   bcf_update_info_int32(out_hdr, out_line, "AN", &an, 1);
   bcf_update_info_int32(out_hdr, out_line, "AC", &ac, 1);
   bcf_update_info_float(out_hdr, out_line, "PF", &pf, 1);
@@ -492,7 +496,7 @@ int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads 
   if(!output_type) output_type="v";
   string mode = "w" + (string) output_type;
   htsFile *out_fh  = hts_open(output_file ? output_file : "-", mode.c_str());
-  cerr << "Writing output to "<<output_file<<" "<<mode<<endl;
+
   if(!out_fh)
     die("problem opening output file");
   else
@@ -522,7 +526,8 @@ int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads 
     }
   }
   fillHeader(out_hdr);
-  bcf_hdr_combine(out_hdr, var_rdr->readers[0].header);
+  //  bcf_hdr_combine(out_hdr, var_rdr->readers[0].header);
+  copyContigs(var_rdr->readers[0].header,out_hdr);
   bcf_hdr_write(out_fh, out_hdr);
 
   while(next()) {
@@ -574,6 +579,7 @@ int view1(int argc,char **argv) {
         {"regions",1,0,'r'},
         {"output-type",1,0,'O'},
         {"output-file",1,0,'o'},
+	{"thread",1,0,'@'},
         {0,0,0,0}
     };
     char *output,*output_type;

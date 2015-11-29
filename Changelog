@@ -1,3 +1,22 @@
+2015-11-28
+*minor ingest1 change. all INFO fields are removed from the header. protects against bad annotations
+
+
+2015-11-27
+*disabled hemizygous warnings
+*cleaned up versioning
+*cleaned up the header for agg genotype output
+
+2015-11-26
+*added the update-info.c plugin and a new AN/AC plugin
+*minor bugfix when calculating INFO/PF with agg genotype (nan when no ALT present)
+
+2015-11-19
+*updatePF.c bug fix
+
+2015-10-29
+*updatePF.c plugin added
+
 2015-10-19
 *added the make_chunk.py script
 

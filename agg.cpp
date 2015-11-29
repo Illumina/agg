@@ -1,12 +1,12 @@
 #include "agg.h"
-#include "version.h"
 #include <omp.h>
 
 int main(int argc, char **argv) {
 
 
   if(argc < 2) {
-    cerr << "\nProgram:\tagg " << VERSION << " (aggregation tool for multiple samples)" << endl;
+    cerr << "\nProgram:\tagg (aggregation tool for multiple gvcfs)" << endl;
+    cerr << "Version:\t" << VERSION <<endl;
     cerr << "Contact:\tjoconnell@illumina.com\n" << endl;
     cerr << "Copyright (c) 2015, Illumina, Inc. All rights reserved. See LICENSE for further details.\n"<<endl;
     cerr << "Usage:\tagg <command> [options]\n" << endl;
@@ -18,10 +18,8 @@ int main(int argc, char **argv) {
   }
   else if(((string)argv[1]) == "ingest2") {
     merge_main(argc, argv);
-    //    die("merge not implemented");
   }
   else if(((string)argv[1]) == "ingest1") {
-    //    ingest1(argc, argv);
     ingest_main(argc,argv);
   }
   //    count1(argc,argv);
