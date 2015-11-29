@@ -7,3 +7,4 @@ version.h
 gmon.out
 *.so
 
+test

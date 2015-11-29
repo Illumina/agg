@@ -34,7 +34,7 @@ agg_genotyper.o: agg_genotyper.cpp agg_genotyper.h version.h
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c agg_genotyper.cpp  
 agg_utils.o: agg_utils.cpp agg.h 
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $< 
-depthMerger.o:  depthMerger.cpp depthMerger.h
+depthMerger.o:  depthMerger.cpp depthMerger.h version.h
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c depthMerger.cpp 
 agg_ingest2.o: agg_ingest2.cpp agg.h 
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $<  
