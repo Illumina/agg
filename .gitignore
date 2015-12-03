@@ -6,3 +6,5 @@ version.h
 *.pico
 gmon.out
 *.so
+
+test
