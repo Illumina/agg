@@ -106,3 +106,4 @@ Genotyping an individual (from their gvcf) who does not have an ALT allele calle
 Multi-allelic annotations for individuals that are ALT in one (or more) of the alleles might be slightly off. Why? Currently DP/GQ are filled from the .dpt file for an individual if they do not have the variant being processed *regardless* of whether they have a different variant at the same position.  This could be solved by buffering all co-occurring variants which is something we are looking at for future versions.
 
 Currently, one should "trust" the annotations where the variant is typed as ALT over ones where they are typed as HOMREF at the same position.
+
