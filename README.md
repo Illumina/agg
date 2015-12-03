@@ -107,3 +107,4 @@ Multi-allelic annotations for individuals that are ALT in one (or more) of the a
 
 Currently, one should "trust" the annotations where the variant is typed as ALT over ones where they are typed as HOMREF at the same position.
 
+
