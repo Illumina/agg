@@ -1,6 +1,11 @@
+2015-12-05
+*mendel plugin will no longer crash on empty pedigree lines
+
+2015-12-03
+*public release of agg v0.3.0
+	
 2015-11-28
 *minor ingest1 change. all INFO fields are removed from the header. protects against bad annotations
-
 
 2015-11-27
 *disabled hemizygous warnings

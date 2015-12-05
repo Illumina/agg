@@ -68,6 +68,11 @@ int read_pedigree(char *fname,pedigree *p) {
     assert(fgets(line,maxl, fp) !=NULL);
     strtok(line,"\t ");
     pch = strtok(NULL,"\t ");
+    if(pch==NULL) {
+      p->n=i;
+      break;
+    }
+      
     p->id[i] = (char *)malloc(strlen(pch)*sizeof(char *));
     strcpy(p->id[i],pch);
     pch = strtok(NULL,"\t ");
