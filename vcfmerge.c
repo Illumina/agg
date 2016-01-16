@@ -22,29 +22,20 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.  */
 
-
-//this file was take from bcftools 1.2 and contains minor modfications for use in the agg tool by Jared O'Connell <joconnell@illumina.com>
-
-
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <htslib/vcf.h>
+#include <htslib/synced_bcf_reader.h>
+#include <htslib/vcfutils.h>
 #include <math.h>
 #include <ctype.h>
 #include "bcftools.h"
 #include "vcmp.h"
 
-
-#include "htslib/vcf.h"
-#include "htslib/synced_bcf_reader.h"
-#include "htslib/vcfutils.h"
-#include "htslib/khash.h"
-
-
-
-
+#include <htslib/khash.h>
 KHASH_MAP_INIT_STR(strdict, int)
 typedef khash_t(strdict) strdict_t;
 
@@ -54,17 +45,6 @@ typedef khash_t(strdict) strdict_t;
 #define IS_VL_G(hdr,id) (bcf_hdr_id2length(hdr,BCF_HL_FMT,id) == BCF_VL_G)
 #define IS_VL_A(hdr,id) (bcf_hdr_id2length(hdr,BCF_HL_FMT,id) == BCF_VL_A)
 #define IS_VL_R(hdr,id) (bcf_hdr_id2length(hdr,BCF_HL_FMT,id) == BCF_VL_R)
-
-
-void error(const char *format, ...)
-{
-    va_list ap;
-    va_start(ap, format);
-    vfprintf(stderr, format, ap);
-    va_end(ap);
-    exit(-1);
-}
-
 
 // For merging INFO Number=A,G,R tags
 typedef struct
@@ -138,8 +118,7 @@ typedef struct
     htsFile *out_fh;
     bcf_hdr_t *out_hdr;
     char **argv;
-    int argc;
-  int nthreads;
+    int argc, n_threads;
 }
 args_t;
 
@@ -442,11 +421,10 @@ static int info_rules_add_values(args_t *args, bcf_hdr_t *hdr, bcf1_t *line, inf
 
 int bcf_hdr_sync(bcf_hdr_t *h);
 
-void bcf_hdr_merge(bcf_hdr_t *hw, const bcf_hdr_t *hr, const char *clash_prefix, int force_samples)
+void merge_headers(bcf_hdr_t *hw, const bcf_hdr_t *hr, const char *clash_prefix, int force_samples)
 {
     // header lines
-    int ret = bcf_hdr_combine(hw, hr);
-    if ( ret!=0 ) error("Error occurred while merging the headers.\n");
+    hw = bcf_hdr_merge(hw, hr);
 
     // samples
     int i;
@@ -599,7 +577,7 @@ char **merge_alleles(char **a, int na, int *map, char **b, int *nb, int *mb)
             ai = a[i];
 
         for (j=1; j<*nb; j++)
-            if ( !strcmp(ai,b[j]) ) break;
+            if ( !strcasecmp(ai,b[j]) ) break;
 
         if ( j<*nb ) // $b already has the same allele
         {
@@ -810,7 +788,7 @@ void merge_filter(args_t *args, bcf1_t *out)
             if ( kitr == kh_end(tmph) )
             {
                 int id = bcf_hdr_id2int(out_hdr, BCF_DT_ID, flt);
-                if ( id==-1 ) error("The filter not defined: %s\n", flt);
+                if ( id==-1 ) error("Error: The filter is not defined in the header: %s\n", flt);
                 hts_expand(int,out->d.n_flt+1,ma->mflt,ma->flt);
                 ma->flt[out->d.n_flt] = id;
                 out->d.n_flt++;
@@ -1548,9 +1526,7 @@ void merge_line(args_t *args)
 
     merge_chrom2qual(args, out);
     merge_filter(args, out);
-    bcf_update_filter(args->out_hdr,out,NULL,0);//just wipe the filters.
-
-    //    merge_info(args, out);
+    merge_info(args, out);
     merge_format(args, out);
 
     bcf_write1(args->out_fh, args->out_hdr, out);
@@ -1798,7 +1774,7 @@ void merge_buffer(args_t *args)
 
             // normalize alleles
             maux->als = merge_alleles(line->d.allele, line->n_allele, maux->d[i][j].map, maux->als, &maux->nals, &maux->mals);
-            if ( !maux->als ) error("Failed to merge alleles at %s:%d in %s\n",bcf_seqname(args->out_hdr,line),line->pos+1,reader->fname);
+            if ( !maux->als ) error("Failed to merge alleles at %s:%d in %s\n",bcf_seqname(bcf_sr_get_header(args->files,j),line),line->pos+1,reader->fname);
             hts_expand0(int, maux->nals, maux->ncnt, maux->cnt);
             for (k=1; k<line->n_allele; k++)
                 maux->cnt[ maux->d[i][j].map[k] ]++;    // how many times an allele appears in the files
@@ -1898,7 +1874,7 @@ void merge_buffer(args_t *args)
 void bcf_hdr_append_version(bcf_hdr_t *hdr, int argc, char **argv, const char *cmd)
 {
     kstring_t str = {0,0,0};
-    ksprintf(&str,"##%sVersion=%s+htslib-%s\n", cmd, "agg", hts_version());
+    ksprintf(&str,"##%sVersion=%s+htslib-%s\n", cmd, bcftools_version(), hts_version());
     bcf_hdr_append(hdr,str.s);
 
     str.l = 0;
@@ -1920,10 +1896,9 @@ void bcf_hdr_append_version(bcf_hdr_t *hdr, int argc, char **argv, const char *c
 
 void merge_vcf(args_t *args)
 {
-    args->out_fh  = hts_open(args->output_fname, "wb");
-    if(args->nthreads>0)  hts_set_threads(args->out_fh,args->nthreads);
-
+    args->out_fh  = hts_open(args->output_fname, hts_bcf_wmode(args->output_type));
     if ( args->out_fh == NULL ) error("Can't write to \"%s\": %s\n", args->output_fname, strerror(errno));
+    if ( args->n_threads ) hts_set_threads(args->out_fh, args->n_threads);
     args->out_hdr = bcf_hdr_init("w");
 
     if ( args->header_fname )
@@ -1936,7 +1911,7 @@ void merge_vcf(args_t *args)
         for (i=0; i<args->files->nreaders; i++)
         {
             char buf[10]; snprintf(buf,10,"%d",i+1);
-            bcf_hdr_merge(args->out_hdr, args->files->readers[i].header,buf,args->force_samples);
+            merge_headers(args->out_hdr, args->files->readers[i].header,buf,args->force_samples);
         }
         bcf_hdr_append_version(args->out_hdr, args->argc, args->argv, "bcftools_merge");
         bcf_hdr_sync(args->out_hdr);
@@ -1971,74 +1946,100 @@ void merge_vcf(args_t *args)
     if ( args->vcmp ) vcmp_destroy(args->vcmp);
 }
 
+static void usage(void)
+{
+    fprintf(stderr, "\n");
+    fprintf(stderr, "About:   Merge multiple VCF/BCF files from non-overlapping sample sets to create one multi-sample file.\n");
+    fprintf(stderr, "         Note that only records from different files can be merged, never from the same file. For\n");
+    fprintf(stderr, "         \"vertical\" merge take a look at \"bcftools norm\" instead.\n");
+    fprintf(stderr, "Usage:   bcftools merge [options] <A.vcf.gz> <B.vcf.gz> [...]\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "        --force-samples                resolve duplicate sample names\n");
+    fprintf(stderr, "        --print-header                 print only the merged header and exit\n");
+    fprintf(stderr, "        --use-header <file>            use the provided header\n");
+    fprintf(stderr, "    -f, --apply-filters <list>         require at least one of the listed FILTER strings (e.g. \"PASS,.\")\n");
+    fprintf(stderr, "    -i, --info-rules <tag:method,..>   rules for merging INFO fields (method is one of sum,avg,min,max,join) or \"-\" to turn off the default [DP:sum,DP4:sum]\n");
+    fprintf(stderr, "    -l, --file-list <file>             read file names from the file\n");
+    fprintf(stderr, "    -m, --merge <string>               allow multiallelic records for <snps|indels|both|all|none|id>, see man page for details [both]\n");
+    fprintf(stderr, "    -o, --output <file>                write output to a file [standard output]\n");
+    fprintf(stderr, "    -O, --output-type <b|u|z|v>        'b' compressed BCF; 'u' uncompressed BCF; 'z' compressed VCF; 'v' uncompressed VCF [v]\n");
+    fprintf(stderr, "    -r, --regions <region>             restrict to comma-separated list of regions\n");
+    fprintf(stderr, "    -R, --regions-file <file>          restrict to regions listed in a file\n");
+    fprintf(stderr, "        --threads <int>                number of extra output compression threads [0]\n");
+    fprintf(stderr, "\n");
+    exit(1);
+}
 
-int main_vcfmerge(int argc, char *argv[],char *file_list, char *output_fname,int nthreads)
+int main_vcfmerge(int argc, char *argv[])
 {
     int c;
     args_t *args = (args_t*) calloc(1,sizeof(args_t));
     args->files  = bcf_sr_init();
     args->argc   = argc; args->argv = argv;
-    args->output_fname = output_fname;
-    args->output_type = FT_BCF_GZ;
-    args->collapse = COLLAPSE_NONE;
-    args->nthreads=nthreads;
+    args->output_fname = "-";
+    args->output_type = FT_VCF;
+    args->n_threads = 0;
+    args->collapse = COLLAPSE_BOTH;
     int regions_is_file = 0;
-    args->file_list=file_list;
+
     static struct option loptions[] =
     {
-        {"help",0,0,'h'},
-        {"merge",1,0,'m'},
-        {"file-list",1,0,'l'},
-        {"apply-filters",1,0,'f'},
-        {"use-header",1,0,1},
-        {"print-header",0,0,2},
-        {"force-samples",0,0,3},
-        {"output",1,0,'o'},
-        {"output-type",1,0,'O'},
-        {"regions",1,0,'r'},
-        {"regions-file",1,0,'R'},
-        {"info-rules",1,0,'i'},
-        {0,0,0,0}
+        {"help",no_argument,NULL,'h'},
+        {"merge",required_argument,NULL,'m'},
+        {"file-list",required_argument,NULL,'l'},
+        {"apply-filters",required_argument,NULL,'f'},
+        {"use-header",required_argument,NULL,1},
+        {"print-header",no_argument,NULL,2},
+        {"force-samples",no_argument,NULL,3},
+        {"output",required_argument,NULL,'o'},
+        {"output-type",required_argument,NULL,'O'},
+        {"threads",required_argument,NULL,9},
+        {"regions",required_argument,NULL,'r'},
+        {"regions-file",required_argument,NULL,'R'},
+        {"info-rules",required_argument,NULL,'i'},
+        {NULL,0,NULL,0}
     };
-    /* while ((c = getopt_long(argc, argv, "hm:f:r:R:o:O:i:l:",loptions,NULL)) >= 0) { */
-    /*     switch (c) { */
-    /*         case 'l': args->file_list = optarg; break; */
-    /*         case 'i': args->info_rules = optarg; break; */
-    /*         case 'o': args->output_fname = optarg; break; */
-    /*         case 'O': */
-    /*             switch (optarg[0]) { */
-    /*                 case 'b': args->output_type = FT_BCF_GZ; break; */
-    /*                 case 'u': args->output_type = FT_BCF; break; */
-    /*                 case 'z': args->output_type = FT_VCF_GZ; break; */
-    /*                 case 'v': args->output_type = FT_VCF; break; */
-    /*                 default: error("The output type \"%s\" not recognised\n", optarg); */
-    /*             } */
-    /*             break; */
-    /*         case 'm': */
-    /*             args->collapse = COLLAPSE_NONE; */
-    /*             if ( !strcmp(optarg,"snps") ) args->collapse |= COLLAPSE_SNPS; */
-    /*             else if ( !strcmp(optarg,"indels") ) args->collapse |= COLLAPSE_INDELS; */
-    /*             else if ( !strcmp(optarg,"both") ) args->collapse |= COLLAPSE_BOTH; */
-    /*             else if ( !strcmp(optarg,"any") ) args->collapse |= COLLAPSE_ANY; */
-    /*             else if ( !strcmp(optarg,"all") ) args->collapse |= COLLAPSE_ANY; */
-    /*             else if ( !strcmp(optarg,"none") ) args->collapse = COLLAPSE_NONE; */
-    /*             else if ( !strcmp(optarg,"id") ) { args->collapse = COLLAPSE_NONE; args->merge_by_id = 1; } */
-    /*             else error("The -m type \"%s\" is not recognised.\n", optarg); */
-    /*             break; */
-    /*         case 'f': args->files->apply_filters = optarg; break; */
-    /*         case 'r': args->regions_list = optarg; break; */
-    /*         case 'R': args->regions_list = optarg; regions_is_file = 1; break; */
-    /*         case  1 : args->header_fname = optarg; break; */
-    /*         case  2 : args->header_only = 1; break; */
-    /*         case  3 : args->force_samples = 1; break; */
-    /*         default: error("Unknown argument: %s\n", optarg); */
-    /*     } */
-    /* } */
-    /* if ( argc==optind && !args->file_list ) error("some error"); */
-    /* if ( argc-optind<2 && !args->file_list ) error("some error"); */
+    while ((c = getopt_long(argc, argv, "hm:f:r:R:o:O:i:l:",loptions,NULL)) >= 0) {
+        switch (c) {
+            case 'l': args->file_list = optarg; break;
+            case 'i': args->info_rules = optarg; break;
+            case 'o': args->output_fname = optarg; break;
+            case 'O':
+                switch (optarg[0]) {
+                    case 'b': args->output_type = FT_BCF_GZ; break;
+                    case 'u': args->output_type = FT_BCF; break;
+                    case 'z': args->output_type = FT_VCF_GZ; break;
+                    case 'v': args->output_type = FT_VCF; break;
+                    default: error("The output type \"%s\" not recognised\n", optarg);
+                }
+                break;
+            case 'm':
+                args->collapse = COLLAPSE_NONE;
+                if ( !strcmp(optarg,"snps") ) args->collapse |= COLLAPSE_SNPS;
+                else if ( !strcmp(optarg,"indels") ) args->collapse |= COLLAPSE_INDELS;
+                else if ( !strcmp(optarg,"both") ) args->collapse |= COLLAPSE_BOTH;
+                else if ( !strcmp(optarg,"any") ) args->collapse |= COLLAPSE_ANY;
+                else if ( !strcmp(optarg,"all") ) args->collapse |= COLLAPSE_ANY;
+                else if ( !strcmp(optarg,"none") ) args->collapse = COLLAPSE_NONE;
+                else if ( !strcmp(optarg,"id") ) { args->collapse = COLLAPSE_NONE; args->merge_by_id = 1; }
+                else error("The -m type \"%s\" is not recognised.\n", optarg);
+                break;
+            case 'f': args->files->apply_filters = optarg; break;
+            case 'r': args->regions_list = optarg; break;
+            case 'R': args->regions_list = optarg; regions_is_file = 1; break;
+            case  1 : args->header_fname = optarg; break;
+            case  2 : args->header_only = 1; break;
+            case  3 : args->force_samples = 1; break;
+            case  9 : args->n_threads = strtol(optarg, 0, 0); break;
+            case 'h':
+            case '?': usage();
+            default: error("Unknown argument: %s\n", optarg);
+        }
+    }
+    if ( argc==optind && !args->file_list ) usage();
+    if ( argc-optind<2 && !args->file_list ) usage();
 
-    /* optind++; */
-    args->info_rules="-";
     args->files->require_index = 1;
     if ( args->regions_list && bcf_sr_set_regions(args->files, args->regions_list, regions_is_file)<0 )
         error("Failed to read the regions: %s\n", args->regions_list);
@@ -2065,3 +2066,40 @@ int main_vcfmerge(int argc, char *argv[],char *file_list, char *output_fname,int
 }
 
 
+int dummy_main_vcfmerge(int argc, char *argv[],char *file_list, char *output_fname,int n_threads)
+{
+    int c;
+    args_t *args = (args_t*) calloc(1,sizeof(args_t));
+    args->files  = bcf_sr_init();
+    args->argc   = argc; args->argv = argv;
+    args->output_fname = output_fname;
+    args->output_type = FT_BCF_GZ;
+    args->collapse = COLLAPSE_NONE;
+    args->n_threads=n_threads;
+    int regions_is_file = 0;
+    args->file_list=file_list;
+    args->info_rules="-";
+    args->files->require_index = 1;
+    if ( args->regions_list && bcf_sr_set_regions(args->files, args->regions_list, regions_is_file)<0 )
+        error("Failed to read the regions: %s\n", args->regions_list);
+
+    while (optind<argc)
+    {
+        if ( !bcf_sr_add_reader(args->files, argv[optind]) ) error("Failed to open %s: %s\n", argv[optind],bcf_sr_strerror(args->files->errnum));
+        optind++;
+    }
+    if ( args->file_list )
+    {
+        int nfiles, i;
+        char **files = hts_readlines(args->file_list, &nfiles);
+        if ( !files ) error("Failed to read from %s\n", args->file_list);
+        for (i=0;i<nfiles; i++)
+            if ( !bcf_sr_add_reader(args->files, files[i]) ) error("Failed to open %s: %s\n", files[i],bcf_sr_strerror(args->files->errnum));
+        for (i=0; i<nfiles; i++) free(files[i]);
+        free(files);
+    }
+    merge_vcf(args);
+    bcf_sr_destroy(args->files);
+    free(args);
+    return 0;
+}

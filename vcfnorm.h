@@ -2,20 +2,6 @@
 #include "rbuf.h"
 #include <htslib/faidx.h>
 
-typedef struct
-{
-    int32_t dir:4, val:28;
-}
-cell_t;
-typedef struct
-{
-    int nmat, nref, nseq;
-    int ipos, lref, lseq;
-    cell_t *mat;
-    char *ref, *seq;
-    int m_arr, *ipos_arr, *lref_arr, *lseq_arr;
-}
-aln_aux_t;
 
 // for -m+, mapping from allele indexes of a single input record
 // to allele indexes of output record
@@ -27,7 +13,6 @@ map_t;
 
 typedef struct
 {
-    aln_aux_t aln;
     char *tseq, *seq;
     int mseq;
     bcf1_t **lines, **tmp_lines, **alines, **blines, *mrow_out;
@@ -35,7 +20,7 @@ typedef struct
     map_t *maps;     // mrow map for each buffered record
     char **als;
     int mmaps, nals, mals;
-    uint8_t *tmp_arr1, *tmp_arr2;
+    uint8_t *tmp_arr1, *tmp_arr2, *diploid;
     int ntmp_arr1, ntmp_arr2;
     kstring_t *tmp_str;
     kstring_t *tmp_als, tmp_als_str;
@@ -46,14 +31,14 @@ typedef struct
     bcf_srs_t *files;       // using the synced reader only for -r option
     bcf_hdr_t *hdr;
     faidx_t *fai;
+    struct { int tot, set, swap; } nref;
     char **argv, *output_fname, *ref_fname, *vcf_fname, *region, *targets;
-    int argc, rmdup, output_type, check_ref, strict_filter;
-    int nchanged, nskipped, ntotal, mrows_op, mrows_collapse, parsimonious;
+    int argc, rmdup, output_type, n_threads, check_ref, strict_filter, do_indels;
+    int nchanged, nskipped, nsplit, ntotal, mrows_op, mrows_collapse, parsimonious;
 }
 args_t;
 
-
-
-
 args_t *init_vcfnorm(  bcf_hdr_t *hdr);
+
+
 void split_multiallelic_to_biallelics(args_t *args, bcf1_t *line);

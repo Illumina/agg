@@ -19,7 +19,7 @@ extern "C" {
 #include "htslib/hts.h"
 
 //this is a dummy definition for a function pilfered directly from bcftools.
-int main_vcfmerge(int argc, char *argv[],char *file_list, char *output_fname,int nthreads);
+int dummy_main_vcfmerge(int argc, char *argv[],char *file_list, char *output_fname,int nthreads);
 }
 
 
@@ -88,7 +88,7 @@ int merge_main(int argc,char **argv) {
   //merge variants.
   char *output_bcf=(char *)malloc(strlen(output)+5);  strcat(strcpy(output_bcf,output),".bcf");
   cerr << "Merging variants..." <<output_bcf<<endl;
-  main_vcfmerge(argc,argv,file_list_fname,output_bcf,n_threads);
+  dummy_main_vcfmerge(argc,argv,file_list_fname,output_bcf,n_threads);
   output_bcf=(char *)malloc(strlen(output)+5);  strcat(strcpy(output_bcf,output),".bcf");
   cerr << "Indexing " <<output_bcf<<endl;
   bcf_index_build(output_bcf, BCF_LIDX_SHIFT);
