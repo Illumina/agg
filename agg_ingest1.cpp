@@ -39,6 +39,7 @@ void remove_info(bcf1_t *line)
         line->d.shared_dirty |= BCF1_DIRTY_INF;
         inf->vptr = NULL;
     }
+    line->n_info=0;
 }
 
 char *find_format(char *ptr,char *FORMAT) {
@@ -61,13 +62,85 @@ char *find_format(char *ptr,char *FORMAT) {
     return(NULL);
 }
 
-int ingest1(const char *input,const char*output) {
+//small class to buffer bcf1_t records and sort them as they are inserted.
+class VarBuffer {
+public:
+  VarBuffer(int w) {
+    _w = w;//window size (physical bp)
+    _last_pos=-1;
+    _ndup=0;
+  }
+  ~VarBuffer() {
+    cerr << "Dropped "<<_ndup<<" duplicated variants after normalization."<<endl;
+  }
+  //add a new variant (and sort if necessary)
+  int push_back(bcf1_t *v) {
+    bcf_unpack(v, BCF_UN_ALL);
+    bcf1_t *tmp=bcf_dup(v);
+    bcf_unpack(tmp, BCF_UN_ALL);
+    _buf.push_back(tmp);
+    int i = _buf.size()-1;
+    while(i>0 && _buf[i]->pos < _buf[i-1]->pos) {
+      tmp=_buf[i-1];
+      _buf[i-1]=_buf[i];
+      _buf[i]=tmp;
+      i--;
+    }
+    return(1);
+  }
+
+  //write out variants to out file
+  int flush(int pos,htsFile *outf,bcf_hdr_t *hdr_out) {
+    int n = 0;
+    while(_buf.size()>0 && (pos - _buf.front()->pos) > _w ) {
+      //      cerr << _last_pos<<"<="<<_buf.front()->pos<<endl;
+      assert(_last_pos<=_buf.front()->pos);
+      if(   _last_pos!=_buf.front()->pos )  
+	_seen.clear();
+      string variant=(string)_buf.front()->d.allele[0] +"."+ (string)_buf.front()->d.allele[1];
+      transform(variant.begin(), variant.end(), variant.begin(), ::toupper);
+      if(_seen.count(variant)) {
+	_ndup++;
+      }
+      else {
+	_seen.insert(variant);
+	bcf_write1(outf, hdr_out, _buf.front());
+      }
+      _last_pos=_buf.front()->pos;
+      bcf_destroy1(      _buf.front() );
+      _buf.pop_front();
+      n++;
+    }    
+    return(n);
+  }  
+
+  //write out variants to out file
+  int flush(htsFile *outf,bcf_hdr_t *hdr_out) {
+    if(_buf.size()>0) {
+      int pos=_buf.back()->pos+_w+1;
+      int ret = flush(pos,outf,hdr_out) ;
+      _last_pos= -1;
+      return(ret);
+    }
+    else{
+      return(0);
+    }
+  }
+  
+private:
+  int _w,_last_pos,_ndup;
+  deque<bcf1_t *> _buf;  
+  set <string> _seen; //list of seen variants at this position.
+};
+
+int ingest1(const char *input,const char*output,char *ref) {
   cerr << "Input: " << input << "\tOutput: "<<output<<endl;
 
   kstream_t *ks;
   kstring_t str = {0,0,0};    
   gzFile fp = gzopen(input, "r");
-    
+  VarBuffer vbuf(1000);
+  int prev_rid = -1;
   if(fp==NULL) {
     fprintf(stderr,"problem opening %s\n",input);
     exit(1);
@@ -95,7 +168,6 @@ int ingest1(const char *input,const char*output) {
     exit(1);    
   }
 
-  bcf1_t *bcf_rec = bcf_init();
   ks = ks_init(fp);
   htsFile *hfp=hts_open(input, "r");
   bcf_hdr_t *hdr_in =  bcf_hdr_read(hfp);
@@ -110,8 +182,7 @@ int ingest1(const char *input,const char*output) {
 
 
   //  bcf_hdr_t  *hdr_out=hdr_in;
-  bcf_hdr_t *hdr_out =  bcf_hdr_init("w");
-  hdr_out=bcf_hdr_dup(hdr_in);
+  bcf_hdr_t *hdr_out =  bcf_hdr_dup(hdr_in);
   remove_hdr_lines(hdr_out,BCF_HL_INFO);
   remove_hdr_lines(hdr_out,BCF_HL_FLT);
   bcf_hdr_sync(hdr_out);
@@ -119,8 +190,8 @@ int ingest1(const char *input,const char*output) {
   //here we add FORMAT/PF. which is the pass filter flag for alts.
   assert(  bcf_hdr_append(hdr_out,"##FORMAT=<ID=PF,Number=A,Type=Integer,Description=\"variant was PASS filter in original sample gvcf\">") == 0);
 
-  args_t *norm_args = init_vcfnorm(hdr_out);
-
+  args_t *norm_args = init_vcfnorm(hdr_out,ref);
+  bcf1_t *bcf_rec = bcf_init();
   bcf_hdr_write(variant_fp, hdr_out);
   kstring_t work1 = {0,0,0};            
   int buf[5];
@@ -169,39 +240,52 @@ int ingest1(const char *input,const char*output) {
 	  die("ERROR: problem writing "+(string)out_fname+".tmp");
       }
       if(is_variant) {//wass this a variant? if so write it out to the bcf
+	norm_args->ntotal++;
 	vcf_parse(&str,hdr_in,bcf_rec);
-
+	//	cerr<<bcf_rec->rid<<":"<<bcf_rec->pos<<endl;
+	if(prev_rid!=bcf_rec->rid) 
+	  vbuf.flush(variant_fp,hdr_out);
+	else
+	  vbuf.flush(bcf_rec->pos,variant_fp,hdr_out);
+	prev_rid=bcf_rec->rid;
 	int32_t pass = bcf_has_filter(hdr_in, bcf_rec, ".");
 	bcf_update_format_int32(hdr_out,bcf_rec,"PF",&pass,1);
 	bcf_update_filter(hdr_out,bcf_rec,NULL,0);
-	if(bcf_rec->n_allele>2) {//split multi-allelics (using vcfnorm.c from bcftools1.2)
+	if(bcf_rec->n_allele>2) {//split multi-allelics (using vcfnorm.c from bcftools1.3
+	  norm_args->nsplit++;
 	  split_multiallelic_to_biallelics(norm_args,bcf_rec );
 	  for(int i=0;i<norm_args->ntmp_lines;i++){
 	    remove_info(norm_args->tmp_lines[i]);
-	    bcf_write1(variant_fp, hdr_out, norm_args->tmp_lines[i]);
+	    realign(norm_args,norm_args->tmp_lines[i]);
+	    vbuf.push_back(norm_args->tmp_lines[i]);
 	  }
 	}
 	else {
 	  remove_info(bcf_rec);
-	  bcf_write1(variant_fp, hdr_out, bcf_rec) ;
+	  realign(norm_args,bcf_rec);
+	  vbuf.push_back(bcf_rec);
 	}
-	//	fprintf(stderr,"%s\n",str.s);
+	vbuf.flush(bcf_rec->pos,variant_fp,hdr_out);
       }
-
     }
   }
+  vbuf.flush(variant_fp,hdr_out);
   bcf_hdr_destroy(hdr_in);
   bcf_hdr_destroy(hdr_out);
-
+  bcf_destroy1(bcf_rec);
   ks_destroy(ks);
   gzclose(fp);
   gzclose(depth_fp);  
   free(str.s);
   free(work1.s);
   hts_close(variant_fp);
+  destroy_data(norm_args);
+  fprintf(stderr,"Variant lines   total/split/realigned/skipped:\t%d/%d/%d/%d\n", norm_args->ntotal,norm_args->nsplit,norm_args->nchanged,norm_args->nskipped);
+
 
   fprintf(stderr,"Indexing %s\n",out_fname);
   bcf_index_build(out_fname, BCF_LIDX_SHIFT);
+  free(out_fname);
   return 0;
 }
 
@@ -211,7 +295,8 @@ static void usage(){
   fprintf(stderr, "Usage:   agg ingest <input_gvcf>\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Required options:\n");
-  fprintf(stderr, "    -o, --output <output_prefix>              agg will output output_prefix.bcf and output_prefix.tmp\n");
+  fprintf(stderr, "    -o, --output <output_prefix>      agg will output output_prefix.bcf and output_prefix.tmp\n");
+  fprintf(stderr, "    -f, --fasta-ref <file>            reference sequence\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n");
   exit(1);
@@ -220,26 +305,29 @@ static void usage(){
 int ingest_main(int argc,char **argv) {
   int c;
   char *output=NULL;
+  char *ref=NULL;
   if(argc<3) usage();
 
   static struct option loptions[] =    {
     {"output-file",1,0,'o'},
+    {"fasta-ref",1,0,'f'},
     {0,0,0,0}
   };
 
-
-  while ((c = getopt_long(argc, argv, "o:",loptions,NULL)) >= 0) {  
+  while ((c = getopt_long(argc, argv, "o:f:",loptions,NULL)) >= 0) {  
     switch (c)
       {
       case 'o': output = optarg; break;
+      case 'f': ref = optarg; break;
       default: die("Unknown argument:"+(string)optarg+"\n");
       }
   }
   if(!output)    die("the -o option is required");
   optind++;
 
-  ingest1(argv[optind],output);
+  ingest1(argv[optind],output,ref);
   cerr << "Done."<<endl;
   return(0);
 }
+
 

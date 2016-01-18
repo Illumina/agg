@@ -1,6 +1,12 @@
 #include "agg.h"
 #include "kseq.h"
 #include "kstring.h"
+#include <deque>
+#include <set>
+#include <string>         // std::string
+#include <locale>         // std::locale, std::toupper
+#include <algorithm>
+#include <iostream>
 
 KSTREAM_INIT(gzFile, gzread, 16384)
 
