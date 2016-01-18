@@ -8,6 +8,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='makes an agg chunk')
     parser.add_argument('input', metavar='input', type=str, help='plain text file listing gvcfs to be ingested')
     parser.add_argument('-output', metavar='output', type=str, help='output prefix',required=True)
+    parser.add_argument('-ref', metavar='ref', type=str, help='reference genome',required=True)
     parser.add_argument('-tmp', metavar='tmp', type=str, help='tmp directory',default="/tmp/")
     parser.add_argument('-nprocess', metavar='nprocess', type=int, help='number of processes to use (defaults to number of CPUs found)',default=None)
     parser.add_argument('-agg', metavar='agg', type=str,default=None, help='agg binary (defaults to binary in script dir)')
@@ -40,7 +41,7 @@ if __name__ == "__main__":
     ##collate chunks with multiprocessing pool
     def process_gvcf(f):        
         tmp_out = "%s/%s"%(tmp_dir,os.path.basename(f).split(".")[0])
-        cmd = args.agg + " ingest1 " + f + " -o " + tmp_out
+        cmd = args.agg + " ingest1 " + f + " -o " + tmp_out + " -r " + args.ref
         sys.stderr.write(cmd+"\n")
         try:
             subprocess.check_output(cmd,shell=True)
