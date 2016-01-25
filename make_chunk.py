@@ -41,7 +41,7 @@ if __name__ == "__main__":
     ##collate chunks with multiprocessing pool
     def process_gvcf(f):        
         tmp_out = "%s/%s"%(tmp_dir,os.path.basename(f).split(".")[0])
-        cmd = args.agg + " ingest1 " + f + " -o " + tmp_out + " -r " + args.ref
+        cmd = args.agg + " ingest1 " + f + " -o " + tmp_out + " -f " + args.ref
         sys.stderr.write(cmd+"\n")
         try:
             subprocess.check_output(cmd,shell=True)

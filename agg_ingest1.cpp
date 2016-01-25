@@ -97,8 +97,19 @@ public:
       assert(_last_pos<=_buf.front()->pos);
       if(   _last_pos!=_buf.front()->pos )  
 	_seen.clear();
+      bcf1_t *tmp = _buf.front();
+      int i=0;
+      while(tmp->d.allele[0][i]) {
+	tmp->d.allele[0][i]=toupper(tmp->d.allele[0][i]);
+	i++;
+      }
+      i=0;
+      while(tmp->d.allele[1][i]) {
+	tmp->d.allele[1][i]=toupper(tmp->d.allele[1][i]);
+	i++;
+      }
+      bcf_update_alleles(hdr_out,tmp,(const char**)tmp->d.allele,tmp->n_allele);
       string variant=(string)_buf.front()->d.allele[0] +"."+ (string)_buf.front()->d.allele[1];
-      transform(variant.begin(), variant.end(), variant.begin(), ::toupper);
       if(_seen.count(variant)) {
 	_ndup++;
       }
