@@ -50,7 +50,8 @@ static inline int replace_iupac_codes(char *seq, int nseq)
   int i, n = 0;
   for (i=0; i<nseq; i++)
     {
-      char c = toupper(seq[i]);
+      seq[i] = toupper(seq[i]);
+      char c = seq[i];
       if ( c!='A' && c!='C' && c!='G' && c!='T' ) { seq[i] = 'N'; n++; }
     }
   return n;
@@ -226,6 +227,7 @@ int realign(args_t *args, bcf1_t *line)
   char *ref = faidx_fetch_seq(args->fai, (char*)args->hdr->id[BCF_DT_CTG][line->rid].key, line->pos, line->pos+reflen-1, &nref);
   if ( !ref ) error("faidx_fetch_seq failed at %s:%d\n", args->hdr->id[BCF_DT_CTG][line->rid].key, line->pos+1);
   replace_iupac_codes(ref,nref);
+
 
   // does REF contain non-standard bases?
   if ( replace_iupac_codes(line->d.allele[0],reflen) )

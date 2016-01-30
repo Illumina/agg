@@ -98,17 +98,19 @@ public:
       if(   _last_pos!=_buf.front()->pos )  
 	_seen.clear();
       bcf1_t *tmp = _buf.front();
-      int i=0;
-      while(tmp->d.allele[0][i]) {
-	tmp->d.allele[0][i]=toupper(tmp->d.allele[0][i]);
-	i++;
-      }
-      i=0;
-      while(tmp->d.allele[1][i]) {
-	tmp->d.allele[1][i]=toupper(tmp->d.allele[1][i]);
-	i++;
-      }
-      bcf_update_alleles(hdr_out,tmp,(const char**)tmp->d.allele,tmp->n_allele);
+
+      // int i=0;
+      // while(tmp->d.allele[0][i]) {
+      // 	tmp->d.allele[0][i]=toupper(tmp->d.allele[0][i]);
+      // 	i++;
+      // }
+      // i=0;
+      // while(tmp->d.allele[1][i]) {
+      // 	tmp->d.allele[1][i]=toupper(tmp->d.allele[1][i]);
+      // 	i++;
+      // }
+      // bcf_update_alleles(hdr_out,tmp,(const char**)tmp->d.allele,tmp->n_allele);
+
       string variant=(string)_buf.front()->d.allele[0] +"."+ (string)_buf.front()->d.allele[1];
       if(_seen.count(variant)) {
 	_ndup++;
@@ -144,7 +146,39 @@ private:
   set <string> _seen; //list of seen variants at this position.
 };
 
-int ingest1(const char *input,const char*output,char *ref) {
+
+
+//decomposes MNPs into multiple records and pushes them into the buffer.
+int decompose(bcf1_t *rec,bcf_hdr_t *hdr,VarBuffer & buf) {
+  assert(rec->n_allele  == 2);
+  char *ref=rec->d.allele[0];
+  char *alt=rec->d.allele[1];
+  int refl = strlen(ref);
+  int altl = strlen(alt);
+  int n=0;
+  if(refl>1 && refl==altl) {//is MNP
+    char alleles[3];
+    alleles[1]=',';
+    for(int i=0;i<refl;i++) {
+      if(ref[i]!=alt[i]) {//new SNP
+	bcf1_t *new_var = bcf_dup(rec);
+	bcf_unpack(new_var, BCF_UN_ALL);
+	alleles[0]=ref[i];
+	alleles[2]=alt[i];
+	new_var->pos+=i;
+	bcf_update_alleles_str(hdr, new_var, alleles);	
+	buf.push_back(new_var);
+	n++;
+      }
+    }
+  }
+  else {
+    buf.push_back(rec);    
+  }  
+  return(n);
+}
+
+int ingest1(const char *input,const char *output,char *ref) {
   cerr << "Input: " << input << "\tOutput: "<<output<<endl;
 
   kstream_t *ks;
@@ -207,6 +241,7 @@ int ingest1(const char *input,const char*output,char *ref) {
   kstring_t work1 = {0,0,0};            
   int buf[5];
   ks_tokaux_t aux;
+  int ndec=0;
   while(    ks_getuntil(ks, '\n', &str, 0) >=0) {
     //    fprintf(stderr,"%s\n",str.s);
     if(str.s[0]!='#')  {
@@ -268,13 +303,15 @@ int ingest1(const char *input,const char*output,char *ref) {
 	  for(int i=0;i<norm_args->ntmp_lines;i++){
 	    remove_info(norm_args->tmp_lines[i]);
 	    realign(norm_args,norm_args->tmp_lines[i]);
-	    vbuf.push_back(norm_args->tmp_lines[i]);
+	    ndec+=decompose(norm_args->tmp_lines[i],hdr_out,vbuf);
+	    //	    vbuf.push_back(norm_args->tmp_lines[i]);
 	  }
 	}
 	else {
 	  remove_info(bcf_rec);
 	  realign(norm_args,bcf_rec);
-	  vbuf.push_back(bcf_rec);
+	  ndec+=decompose(bcf_rec,hdr_out,vbuf);
+	  //	  vbuf.push_back(bcf_rec);
 	}
 	vbuf.flush(bcf_rec->pos,variant_fp,hdr_out);
       }
@@ -292,6 +329,7 @@ int ingest1(const char *input,const char*output,char *ref) {
   hts_close(variant_fp);
   destroy_data(norm_args);
   fprintf(stderr,"Variant lines   total/split/realigned/skipped:\t%d/%d/%d/%d\n", norm_args->ntotal,norm_args->nsplit,norm_args->nchanged,norm_args->nskipped);
+  fprintf(stderr,"Created %d SNPs from decomposing %d MNPs\n", ndec,0);
 
 
   fprintf(stderr,"Indexing %s\n",out_fname);
