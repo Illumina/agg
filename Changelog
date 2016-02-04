@@ -1,3 +1,7 @@
+2016-02-04
+*agg ingest1 now decomposes MNPs, left-aligns and right trims (via bcftools' vcfnorm.c)
+*fixed a bug relating to genotyping indels that span a region where DP/GQ is missing
+
 2016-01-16
 *moved to htslib-1.3
 
@@ -72,6 +76,6 @@
 *FORMAT field now includes DP/AD/GQ for any genotype containing and ALT (todo: homref)
 
 2015-03-20
-*initial version deployed to Cambridge HPC
+*initial version
 
 

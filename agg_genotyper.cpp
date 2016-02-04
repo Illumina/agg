@@ -85,12 +85,13 @@ aggReader::aggReader(const vector<string>& input_files,const string &region) {
       interval_start=stoi(tmp1)-1;
       interval_end=interval_start;
     }
+    interval_start=max(0,interval_start);
     cerr << "interval_start = "<<interval_start<<" interval_end="<<interval_end<<endl;
-  }else {
+  } else {
     interval_start=0;
     interval_end=INT32_MAX;
   }
-    
+
   for(int i=0;i<nreader;i++)    tmp[i]=input_files[i].substr(0,input_files[i].size()-4)+".dpt"  ;
   dp_rdr = vcf_ropen(tmp,region);
 
@@ -245,21 +246,22 @@ int aggReader::setDepth() {
       b=var_stop;
       int   var_len=b-a+1;
       float num=0;
-      int min_gq = bcf_int32_missing;
+      int min_gq = 10000;
       while(it1!=dp_buf[i].end() && it1->stop < a) 
 	it1++;
 
       while(it1!=dp_buf[i].end() && it1->start <= b) {
-	//dp
-	if(it1->start <= a && it1->stop >= b) 
-	  num += it1->depth * var_len;	
-	else if(it1->start<=a)
-	  num += (it1->stop - a + 1)*it1->depth;
-	else if(it1->stop>=b)
-	  num += (b - it1->start + 1)*it1->depth;
-	//gq.  simply finding the mingq across the region.
+	if(it1->depth!=bcf_int32_missing) {	//summing DP
+	  if(it1->start <= a && it1->stop >= b) 
+	    num += it1->depth * var_len;	
+	  else if(it1->start<=a)
+	    num += (it1->stop - a + 1)*it1->depth;
+	  else if(it1->stop>=b)
+	    num += (b - it1->start + 1)*it1->depth;
+	}
+	//GQ. simply finding the mingq across the region.
 	if( (a<=it1->start && b>=it1->start) || (a<=it1->stop && b>=it1->stop) )
-	  if(min_gq==bcf_int32_missing||it1->gq < min_gq)
+	  if(it1->gq==bcf_int32_missing||it1->gq < min_gq)
 	    min_gq = it1->gq;
 	it1++;
       }

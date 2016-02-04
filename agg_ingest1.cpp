@@ -99,6 +99,7 @@ public:
 	_seen.clear();
       bcf1_t *tmp = _buf.front();
 
+      //capitalises ref/alt. this should now be fixed upstream.
       // int i=0;
       // while(tmp->d.allele[0][i]) {
       // 	tmp->d.allele[0][i]=toupper(tmp->d.allele[0][i]);
@@ -242,6 +243,7 @@ int ingest1(const char *input,const char *output,char *ref) {
   int buf[5];
   ks_tokaux_t aux;
   int ndec=0;
+  int ref_len,alt_len;
   while(    ks_getuntil(ks, '\n', &str, 0) >=0) {
     //    fprintf(stderr,"%s\n",str.s);
     if(str.s[0]!='#')  {
@@ -252,8 +254,20 @@ int ingest1(const char *input,const char *output,char *ref) {
       buf[0] =  bcf_hdr_name2id(hdr_in, work1.s);
       assert(      buf[0]>=0);
       buf[1]=atoi(ptr)-1;
-      for(int i=0;i<3;i++)  ptr = kstrtok(NULL,NULL,&aux);// gets us to ALT
-      bool is_variant=ptr[0]!='.';
+      ptr = kstrtok(NULL,NULL,&aux);//ID
+      ptr = kstrtok(NULL,NULL,&aux);//REF
+
+      ref_len=0;
+      while(ptr[ref_len]!='\t') ref_len++;
+
+      ptr = kstrtok(NULL,NULL,&aux);//ALT
+
+      bool is_variant=false;
+      alt_len=0;
+      while(ptr[alt_len]!='\t') alt_len++;
+      if(ptr[0]!='.') 
+	is_variant=true;
+      
 
       for(int i=0;i<3;i++)  ptr = kstrtok(NULL,NULL,&aux);// gets us to INFO
 
@@ -262,7 +276,7 @@ int ingest1(const char *input,const char *output,char *ref) {
       if(end_ptr!=NULL) 
 	buf[2]=atoi(end_ptr+4)-1;
       else
-	buf[2]=buf[1];
+	buf[2]=buf[1]+alt_len-1;
 
       ptr  = kstrtok(NULL,NULL,&aux);//FORMAT
       //find index of DP (if present)
@@ -372,6 +386,7 @@ int ingest_main(int argc,char **argv) {
       }
   }
   if(!output)    die("the -o option is required");
+  if(!ref)    die("the -f option is required");
   optind++;
 
   ingest1(argv[optind],output,ref);
