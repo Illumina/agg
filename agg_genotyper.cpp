@@ -267,6 +267,7 @@ int aggReader::setDepth() {
       }
       _out_dp[i] = (int)(round(num/(float)var_len));
       _out_gq[i] = min_gq;
+      assert(_out_dp[i]==bcf_int32_missing||_out_gq[i]==bcf_int32_missing||_out_dp[i]>=0 && _out_gq[i] >=00);
     }
   }
 
