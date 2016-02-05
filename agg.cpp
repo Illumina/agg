@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
     cerr << "\nProgram:\tagg (aggregation tool for multiple gvcfs)" << endl;
     cerr << "Version:\t" << VERSION <<endl;
     cerr << "Contact:\tjoconnell@illumina.com\n" << endl;
-    cerr << "Copyright (c) 2015, Illumina, Inc. All rights reserved. See LICENSE for further details.\n"<<endl;
+    cerr << "Copyright (c) 2016, Illumina, Inc. All rights reserved. See LICENSE for further details.\n"<<endl;
     cerr << "Usage:\tagg <command> [options]\n" << endl;
     cerr << "Commands:" << endl;
     cerr << "\tingest1\t\tconverts gvcfs to input suitable for agg ingest2" << endl;
