@@ -1,6 +1,6 @@
 agg: a utility for aggregating gvcfs. This software is not commercially supported.
 
-Copyright (c) 2015, Illumina, Inc. All rights reserved. 
+Copyright (c) 2016, Illumina, Inc. All rights reserved. 
 
 The agg source code is provided under the [GPLv3 license] (LICENSE).
 
