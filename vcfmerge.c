@@ -434,7 +434,8 @@ void merge_headers(bcf_hdr_t *hw, const bcf_hdr_t *hr, const char *clash_prefix,
         if ( bcf_hdr_id2int(hw, BCF_DT_SAMPLE, name)!=-1 )
         {
             // there is a sample with the same name
-            if ( !force_samples ) error("Error: Duplicate sample names (%s), use --force-samples to proceed anyway.\n", name);
+	  //            if ( !force_samples ) error("Error: Duplicate sample names (%s), use --force-samples to proceed anyway.\n", name);
+            if ( !force_samples ) error("Error: Duplicate sample names (%s)..\n", name);
 
             int len = strlen(hr->samples[i]) + strlen(clash_prefix) + 1;
             name = (char*) malloc(sizeof(char)*(len+1));
