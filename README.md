@@ -41,9 +41,11 @@ then run the script on each chunk
 mkdir chunks/
 for i in chunk_*;
 do
-        python ~/agg/make_chunk.py $i -o chunks/${i} -nproc 16 -tmp /scratch/
+        python ~/agg/make_chunk.py $i -o chunks/${i} -nprocess 16 -tmp /scratch/ -r genome.fa
 done        
 ```
+where `genome.fa` is the relevant reference genome.
+
 Note the above command will:
 * use 16 processes
 * take a while (~24 hours)
