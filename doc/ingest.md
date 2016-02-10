@@ -7,7 +7,7 @@ Creating a chunk is currently a two stage process using the `agg ingest1` and `a
 You can do this to one gvcf like so:
 ```
 $ mkdir ingest1/
-$ agg ingest1 sample1.genome.vcf.gz -o ingest1/sample1
+$ agg ingest1 sample1.genome.vcf.gz -o ingest1/sample1 -r genome.fa
 Input: sample1.genome.vcf.gz    Output: ingest1/sample1
 depth: ingest1/sample1.dpt
 variants: ingest1/sample1.bcf
