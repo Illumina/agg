@@ -354,8 +354,8 @@ int ingest1(const char *input,const char *output,char *ref) {
 
 static void usage(){
   fprintf(stderr, "\n");
-  fprintf(stderr, "About:   ingest a single sample gvcf into a variant-only .bcf and tempory depth interval (.tmp)\n");
-  fprintf(stderr, "Usage:   agg ingest <input_gvcf>\n");
+  fprintf(stderr, "About:   ingests a single sample gvcf into a variant-only .bcf and tempory depth interval (.tmp)\n");
+  fprintf(stderr, "Usage:   agg ingest1 <input_gvcf>\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Required options:\n");
   fprintf(stderr, "    -o, --output <output_prefix>      agg will output output_prefix.bcf and output_prefix.tmp\n");

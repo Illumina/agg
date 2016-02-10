@@ -549,8 +549,8 @@ int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads 
 
 static void usage(){
     fprintf(stderr, "\n");
-    fprintf(stderr, "About:   view samples from <agg_file> at a region in the genome.\n");
-    fprintf(stderr, "Usage:   agg view <agg_file>\n");
+    fprintf(stderr, "About:   genotypes samples from agg chunks\n");
+    fprintf(stderr, "Usage:   agg genotype chunk1 [chunk2 [...]]\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Required options:\n");
     fprintf(stderr, "    -r, --regions <region>              region to genotype eg. chr1 or chr20:5000000-6000000\n");
@@ -558,7 +558,7 @@ static void usage(){
     fprintf(stderr, "Output options:\n");
     fprintf(stderr, "    -o,   --output-file <file>          output file name [stdout]\n");
     fprintf(stderr, "    -O,   --output-type <b|u|z|v>       b: compressed BCF, u: uncompressed BCF, z: compressed VCF, v: uncompressed VCF [v]\n");
-    fprintf(stderr, "    -@, --thread INT        number of threads [0]\n");
+    fprintf(stderr, "    -@, --thread INT                    number of threads [0]\n");
     fprintf(stderr, "\n");
     // fprintf(stderr, "Subset options:\n");
     // fprintf(stderr, "    -s, --samples [^]<list>       comma separated list of samples to include (or exclude with \"^\" prefix)\n");

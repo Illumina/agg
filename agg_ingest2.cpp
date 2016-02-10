@@ -29,7 +29,7 @@ using namespace std;
 static void usage(){
   fprintf(stderr, "\n");
   fprintf(stderr, "About:   merges single sample agg files into an agg chunk\n");
-  fprintf(stderr, "Usage:   agg ingest2 <input1> <input2> ... <inputN> -o output_prefix\n");
+  fprintf(stderr, "Usage:   agg ingest2 input1 [input2 [...]] -o output_prefix\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Required options:\n");
   fprintf(stderr, "    -o, --output <output_prefix>       agg will output output_prefix.bcf and output_prefix.dpt\n");

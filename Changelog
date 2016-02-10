@@ -1,3 +1,6 @@
+2016-02-10
+*fixed some minor typos in README and binaries stdout
+
 2016-02-04
 *agg ingest1 now decomposes MNPs, left-aligns and right trims (via bcftools' vcfnorm.c)
 *fixed a bug relating to genotyping indels that span a region where DP/GQ is missing
