@@ -66,9 +66,10 @@ bcf_srs_t *vcf_ropen(const vector<string>& input_files,const string &region) {
   return(sr);
 }
 
-aggReader::aggReader(const vector<string>& input_files,const string &region) {
+aggReader::aggReader(const vector<string>& input_files,const string &region,bool force_samples) {
   nreader = input_files.size();
   _nsample = 0;  
+  _force_samples=force_samples;
   vector<string> tmp(nreader);
   for(int i=0;i<nreader;i++)    tmp[i]=input_files[i];
   var_rdr = vcf_ropen(tmp,region);
@@ -511,7 +512,6 @@ int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads 
   out_line = bcf_init1();
   out_hdr = bcf_hdr_init("w");
   int repeat_count=0;
-  bool force_samples=true;
   for(int i=0; i<nreader; i++) {
     bcf_hdr_t *hr = var_rdr->readers[i].header;
     for(int j=0;j<bcf_hdr_nsamples(hr);j++) {
@@ -523,7 +523,7 @@ int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads 
 	  cerr << " -> "<< sample_name<<endl;
 	}
 	else
-	  die("duplicate sample names. use --force-samples if you want to merge anyway");
+	  die("duplicate sample names.\nTry --allow-duplicates if you want to merge anyway (not recommended)");
       }
       bcf_hdr_add_sample(out_hdr,sample_name.c_str());
     }
@@ -575,6 +575,7 @@ int view1(int argc,char **argv) {
     int c;
     string region="";
     int n_threads=0;
+    bool force_samples=0;
     if(argc<3) usage();
     static struct option loptions[] =    {
         {"samples",1,0,'s'},
@@ -583,6 +584,7 @@ int view1(int argc,char **argv) {
         {"output-type",1,0,'O'},
         {"output-file",1,0,'o'},
 	{"thread",1,0,'@'},
+	{"allow-duplicates",no_argument,NULL,1},
         {0,0,0,0}
     };
     char *output,*output_type;
@@ -606,6 +608,7 @@ int view1(int argc,char **argv) {
         case 'S': sample_names = optarg; sample_is_file = 1; break;
         case 'r': region = optarg; break;    
         case '?': usage();
+	case  1 : force_samples = 1; break;
         default: die("Unknown argument:"+(string)optarg+"\n");
         }
     }

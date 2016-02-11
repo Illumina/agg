@@ -19,12 +19,10 @@ extern "C" {
 #include "htslib/hts.h"
 
 //this is a dummy definition for a function pilfered directly from bcftools.
-int dummy_main_vcfmerge(int argc, char *argv[],char *file_list, char *output_fname,int nthreads);
+  int dummy_main_vcfmerge(int arg,char **argv,char *file_list, char *output_fname,int nthreads,int force_samples);
 }
 
-
 using namespace std;
-
 
 static void usage(){
   fprintf(stderr, "\n");
@@ -36,22 +34,24 @@ static void usage(){
   fprintf(stderr, "Optional options:\n");
   fprintf(stderr, "    -@, --thread INT                   number of compression threads [0]\n");
   fprintf(stderr, "    -l, --list   files.txt             plain text file listing agg chunks to merge]\n");
+  fprintf(stderr, "    --allow-duplicates                 allow duplicate sample names (duplicates will have a suffix added)\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n");
   exit(1);
 }
-
 
 int merge_main(int argc,char **argv) {
 
   int c;
   char *output=NULL,*file_list_fname=NULL;
   int n_threads=0;
+  bool force_samples=0;
   if(argc<3) usage();
   static struct option loptions[] =    {
     {"output",1,0,'o'},
     {"thread",1,0,'@'},
     {"list",1,0,'l'},
+    {"allow-duplicates",no_argument,NULL,1},
     {0,0,0,0}
   };
 
@@ -60,7 +60,9 @@ int merge_main(int argc,char **argv) {
       {
       case 'l': file_list_fname = optarg; break;
       case 'o': output = optarg; break;
+      case 'd': output = optarg; break;
       case '@': n_threads = atoi(optarg); break;
+      case  1 : force_samples = 1; break;
       default: die("Unknown argument:"+(string)optarg+"\n");
       }
   }
@@ -88,7 +90,7 @@ int merge_main(int argc,char **argv) {
   //merge variants.
   char *output_bcf=(char *)malloc(strlen(output)+5);  strcat(strcpy(output_bcf,output),".bcf");
   cerr << "Merging variants..." <<output_bcf<<endl;
-  dummy_main_vcfmerge(argc,argv,file_list_fname,output_bcf,n_threads);
+  dummy_main_vcfmerge(argc,argv,file_list_fname,output_bcf,n_threads,force_samples);
   output_bcf=(char *)malloc(strlen(output)+5);  strcat(strcpy(output_bcf,output),".bcf");
   cerr << "Indexing " <<output_bcf<<endl;
   bcf_index_build(output_bcf, BCF_LIDX_SHIFT);
@@ -96,7 +98,7 @@ int merge_main(int argc,char **argv) {
   ///build the depth tract
   char *dp_out_fname=(char *)malloc(strlen(output)+5);
   strcat(strcpy(dp_out_fname,output),".dpt");
-  depthMerger d(file_list);
+  depthMerger d(file_list,force_samples=force_samples);
   d.setThreads(n_threads);
   d.writeDepthMatrix(dp_out_fname);
   cerr << "Indexing " <<dp_out_fname<<endl;

@@ -9,6 +9,7 @@
 #include <vector>
 #include <deque>
 #include <string>
+#include <map>
 #include "string.h"
 
 #include "utils.h"
@@ -55,7 +56,7 @@ class depthMerger {
  public:
   int _nsample;
   int32_t *dp,*gq;
-  depthMerger(vector<string> & files);
+  depthMerger(vector<string> & files,bool force_samples=0);
   depthMerger();
   ~depthMerger();
   int writeDepthMatrix(const char *output_file);
@@ -75,7 +76,7 @@ class depthMerger {
   void wait_less(int i);
   void more(int i);
   void wait_more(int i);
-
+  void setForceSamples(int f);
 
   pthread_t *_threads;
   const static  int buf_size=1000;
@@ -93,7 +94,7 @@ class depthMerger {
   void lockDepthBuffer();
   bool checkBufferIsOkayToRead();
   void startReadBuffer();
-
+  bool _force_samples;
   struct  next_args *_dp_buf_args;
 };
 
