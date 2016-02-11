@@ -517,7 +517,7 @@ int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads 
     for(int j=0;j<bcf_hdr_nsamples(hr);j++) {
       string sample_name=hr->samples[j];
       if ( bcf_hdr_id2int(out_hdr, BCF_DT_SAMPLE, sample_name.c_str())!=-1 ) {
-	if(force_samples) {
+	if(_force_samples) {
 	  cerr << "Warning duplicate sample found.\t" << sample_name;
 	  sample_name += ":R"+to_string(static_cast<long long>(repeat_count++));
 	  cerr << " -> "<< sample_name<<endl;
@@ -629,7 +629,7 @@ int view1(int argc,char **argv) {
         die("only handles a single region. "+region);
 
     cerr << "n_threads = "<<n_threads<<endl;
-    aggReader ag(input,region);
+    aggReader ag(input,region,force_samples=force_samples);
     ag.writeVcf(output,output_type,n_threads);
     
     return(0);
