@@ -25,7 +25,7 @@ class variantRow {
   variantRow(int nsample);
   ~variantRow();
   int n,n_allele;
-  int32_t *dp,*ad,*gt,*pf;
+  int32_t *dp,*dpf,*ad,*gt,*pf;
   int32_t  *gq;
 };
 
