@@ -8,10 +8,8 @@ void depthReader::open(const char *depth_fname) {
     cerr<<"problem opening "<< depth_fname<<endl;
     exit(1);
   }
-  if(!gzread(_fp,_buf,20)) 
-    die("problem opening "+(string)depth_fname);
-  //  for(int i=0;i<5;i++) cerr << _buf[i] << " "; cerr << endl;
   _open=true;
+  next();
 }
 
 bool depthReader::next() {
