@@ -1,3 +1,10 @@
+2015-03-03
+*fixed a bug related to INFO/DPA annotation in update-info.c plugin
+
+2015-02-23
+*agg genotype now includes FORMAT/DPF (alt genotypes only)
+*the update-info plugin now calculates the INFO/AB field
+
 2016-02-10
 *fixed some minor typos in README and binaries stdout
 

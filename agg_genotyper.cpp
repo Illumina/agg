@@ -13,6 +13,7 @@ int fillHeader(bcf_hdr_t *hdr) {//fills in the standard stuff for an agg header.
   bcf_hdr_append(hdr, "##INFO=<ID=AN,Number=1,Type=Integer,Description=\"Total number of alleles in called genotypes\">");
   bcf_hdr_append(hdr, "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">");
   bcf_hdr_append(hdr, "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Filtered basecall depth used for site genotyping\">");
+  bcf_hdr_append(hdr, "##FORMAT=<ID=DPF,Number=1,Type=Integer,Description=\"Basecalls filtered from input prior to site genotyping\">");
   bcf_hdr_append(hdr, "##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed.\">");
   bcf_hdr_append(hdr, "##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">");
   bcf_hdr_append(hdr, "##FORMAT=<ID=PF,Number=A,Type=Integer,Description=\"variant was PASS filter in original sample gvcf\">");
@@ -24,6 +25,7 @@ int variantRow::clear() {
   for(int i=0;i<n;i++) {
     pf[i]= bcf_int32_missing;
     dp[i]= bcf_int32_missing;
+    dpf[i]= bcf_int32_missing;
     gt[2*i]= bcf_int32_missing;
     gt[2*i+1]= bcf_int32_missing;
     ad[2*i]= bcf_int32_missing;
@@ -38,6 +40,7 @@ variantRow::variantRow(int nsample) {
   n=nsample;
   pf = (int32_t *)malloc(n*sizeof(int32_t));
   dp = (int32_t *)malloc(n*sizeof(int32_t));
+  dpf = (int32_t *)malloc(n*sizeof(int32_t));
   gt = (int32_t *)malloc(2*n*sizeof(int32_t));
   gq = (int32_t *)malloc(n*sizeof(int32_t));
   ad = (int32_t *)malloc(2*n*sizeof(int32_t));
@@ -347,6 +350,7 @@ int aggReader::next() {
       bcf_hdr_t *hdr = var_rdr->readers[i].header;
       int32_t *gt=&(vr->gt[2*offset]);
       int32_t *dp1=&(vr->dp[offset]);
+      int32_t *dpf=&(vr->dpf[offset]);
       int32_t *pf=&(vr->pf[offset]);
       int32_t *gq1= &(vr->gq[offset]);
       int32_t *ad=&(vr->ad[n_allele*offset]);
@@ -379,6 +383,7 @@ int aggReader::next() {
 	bcf_get_format_int32(hdr, line[i], "AD", &ad, &nval);
 
 	nval=ntmp;
+	bcf_get_format_int32(hdr, line[i], "DPF", &dpf, &nval);
 	bcf_get_format_int32(hdr, line[i], "DP", &dp1, &nval);
 	bcf_get_format_int32(hdr, line[i], "GQ", &gq1, &nval);
 	bcf_get_format_int32(hdr, line[i], "PF", &pf, &nval);
@@ -427,6 +432,7 @@ int aggReader::next() {
     bcf_update_genotypes(out_hdr,out_line,vr->gt,_nsample*2); 
     bcf_update_format_int32(out_hdr,out_line,"GQ",vr->gq,_nsample);
     bcf_update_format_int32(out_hdr,out_line,"DP",vr->dp,_nsample );
+    bcf_update_format_int32(out_hdr,out_line,"DPF",vr->dpf,_nsample );
     bcf_update_format_int32(out_hdr,out_line,"AD",vr->ad,_nsample*n_allele );
     bcf_update_format_int32(out_hdr,out_line,"PF",vr->pf,_nsample );
     line_count++;
