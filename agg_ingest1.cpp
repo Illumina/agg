@@ -217,6 +217,8 @@ int ingest1(const char *input,const char *output,char *ref) {
   ks = ks_init(fp);
   htsFile *hfp=hts_open(input, "r");
   bcf_hdr_t *hdr_in =  bcf_hdr_read(hfp);
+  if( bcf_hdr_id2int(hdr_in, BCF_DT_ID, "GQX")== -1) die("FORMAT/GQX was not in the GVCF");
+  if( bcf_hdr_id2int(hdr_in, BCF_DT_ID, "DP")== -1) die("FORMAT/DP was not in the GVCF");
   hts_close(hfp);
   //this is a hack to fix broken gvcfs where AD is incorrectly defined in the header.
   bcf_hdr_remove(hdr_in,BCF_HL_FMT,"AD");
@@ -286,7 +288,11 @@ int ingest1(const char *input,const char *output,char *ref) {
       if(DP_ptr!=NULL) {
 	buf[3]=atoi(DP_ptr);
 	char *GQX_ptr = find_format(ptr,"GQX");
-	assert(GQX_ptr!=NULL);
+	if(GQX_ptr==NULL) {
+	  cerr << str.s <<endl;
+	  die("FORMAT/GQX was not found");
+	  exit(1);
+	}
 	
 	//trying to reduce entropy on GQ to get better compression performance.
 	//1. rounds down to nearest 10. 
