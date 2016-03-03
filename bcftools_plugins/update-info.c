@@ -88,8 +88,14 @@ bcf1_t *process(bcf1_t *rec)
     //depth
     if(f_dp[i]!=bcf_int32_missing) sum_dp+=f_dp[i];
     if(bcf_gt_allele(gt[i*2])>0 || bcf_gt_allele(gt[i*2+1])>0) {
-      if(f_dpf[i]!=bcf_int32_missing)      sum_dpf+=f_dpf[i];
-      sum_dpa+=f_dp[i];
+      if(f_dpf[i]!=bcf_int32_missing)      
+	sum_dpf+=f_dpf[i];
+      if(f_dp[i]!=bcf_int32_missing)      
+	sum_dpa+=f_dp[i];
+      else 
+	if(f_ad[i*2]!=bcf_int32_missing && f_ad[i*2+1]!=bcf_int32_missing)
+	  sum_dpa+=f_ad[i*2]+f_ad[i*2+1];
+
     }    
     //ad
     if(gt[i*2+1]!=bcf_gt_missing && gt[i*2]!=bcf_gt_missing) {
