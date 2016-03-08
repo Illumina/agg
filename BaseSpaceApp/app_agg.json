@@ -1,0 +1,12 @@
+{
+"App Name": "AutomaticallyGeneratedApp",
+"Command": "agg/bsAppScript.sh <Choose a project containing genome VCFs:Project=3396395>",
+
+"Files": [ "agg" ],
+
+"Packages (reachable using ubuntu's apt-get install)": [ "samtools", "curl", "make", "python" ],
+
+"Extra commands to run during docker image creation": [ ],
+
+"Docker repository": "docker.illumina.com/bsuser2/automatically-created-app"
+}
