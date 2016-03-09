@@ -1,0 +1,23 @@
+# Instructions to create the BaseSpace app
+
+# Get source code, but as you're reading this you must already have done it
+git clone https://github.com/Illumina/agg.git
+cd agg
+git checkout basespace
+
+# Compile agg
+make
+
+# Prepare app files
+cd BaseSpaceApp
+mkdir agg
+cp ../agg ../make_chunk.py bsAppScript.sh agg/
+
+# Create app (internal tool for the moment, ask ljanin)
+bs-create-native-app app_agg.json
+
+
+
+Notes:
+- The app is called "AutomaticallyGeneratedApp". I leave this as it is until we are happy to make it public.
+- The app is created for basespaceuser2 account on Hoth server
