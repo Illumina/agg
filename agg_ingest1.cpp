@@ -97,8 +97,8 @@ public:
       assert(_last_pos<=_buf.front()->pos);
       if(   _last_pos!=_buf.front()->pos )  
 	_seen.clear();
-      bcf1_t *tmp = _buf.front();
 
+      //      bcf1_t *tmp = _buf.front();
       //capitalises ref/alt. this should now be fixed upstream.
       // int i=0;
       // while(tmp->d.allele[0][i]) {
@@ -159,8 +159,7 @@ int decompose(bcf1_t *rec,bcf_hdr_t *hdr,VarBuffer & buf) {
   int altl = strlen(alt);
   int n=0;
   if(refl>1 && refl==altl) {//is MNP
-    char alleles[3];
-    alleles[1]=',';
+    char alleles[4] = "X,X";
     for(int i=0;i<refl;i++) {
       if(ref[i]!=alt[i]) {//new SNP
 	bcf1_t *new_var = bcf_dup(rec);
