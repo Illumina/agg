@@ -12,6 +12,7 @@ if __name__ == "__main__":
     parser.add_argument('-tmp', metavar='tmp', type=str, help='tmp directory',default="/tmp/")
     parser.add_argument('-nprocess', metavar='nprocess', type=int, help='number of processes to use (defaults to number of CPUs found)',default=None)
     parser.add_argument('-agg', metavar='agg', type=str,default=None, help='agg binary (defaults to binary in script dir)')
+    parser.add_argument('--ignore-non-matching-ref', action='store_true',default=False)
     args = parser.parse_args()
     sys.stderr.write(" ".join(sys.argv)+"\n")
 
@@ -42,6 +43,8 @@ if __name__ == "__main__":
     def process_gvcf(f):        
         tmp_out = "%s/%s"%(tmp_dir,os.path.basename(f).split(".")[0])
         cmd = args.agg + " ingest1 " + f + " -o " + tmp_out + " -f " + args.ref
+        if args.ignore_non_matching_ref:
+            cmd += " --ignore-non-matching-ref"
         sys.stderr.write(cmd+"\n")
         try:
             subprocess.check_output(cmd,shell=True)
