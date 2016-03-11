@@ -369,7 +369,7 @@ static void usage(){
   fprintf(stderr, "Required options:\n");
   fprintf(stderr, "    -o, --output <output_prefix>      agg will output output_prefix.bcf and output_prefix.tmp\n");
   fprintf(stderr, "    -f, --fasta-ref <file>            reference sequence\n");
-
+  fprintf(stderr, "        --ignore-non-matching-ref     skip non-matching ref alleles (will warn)\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n");
   exit(1);
