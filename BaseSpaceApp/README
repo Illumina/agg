@@ -4,9 +4,16 @@
 git clone https://github.com/Illumina/agg.git
 cd agg
 git checkout basespace
-
-# Compile agg
 make
+cd ..
+
+git clone git@git.illumina.com:Bioinformatics/akt.git
+cd akt
+make
+cd ..
+
+# App 1: agg
+# ==========
 
 # Prepare app files
 cd BaseSpaceApp
@@ -14,10 +21,32 @@ mkdir agg
 cp ../agg ../make_chunk.py bsAppScript.sh agg/
 
 # Create app (internal tool for the moment, ask ljanin)
+export PATH=$PATH:<bs app creation tools location>
 bs-create-native-app app_agg.json
+
+
+# App 2: agg2
+# ===========
+
+# Prepare app files
+cd BaseSpaceApp
+mkdir agg2
+cp ../agg bsAppScript2.sh agg2/
+scp -r ljanin@ljanin.ukch-devbox.illumina.com:/illumina/thirdparty/bcftools/bcftools-1.2/bcftools agg2/
+scp -r ljanin@ljanin.ukch-devbox.illumina.com:/illumina/thirdparty/bcftools/bcftools-1.2/plot-vcfstats agg2/
+cp akt/akt agg2/
+cp -r akt/scripts agg2
+cp -r akt/data agg2
+
+# Create app (internal tool for the moment, ask ljanin)
+export PATH=$PATH:<bs app creation tools location>
+bs-create-native-app app_agg2.json
 
 
 
 Notes:
 - The app is called "AutomaticallyGeneratedApp". I leave this as it is until we are happy to make it public.
 - The app is created for basespaceuser2 account on Hoth server
+
+
+
