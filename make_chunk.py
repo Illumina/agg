@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument('-nprocess', metavar='nprocess', type=int, help='number of processes to use (defaults to number of CPUs found)',default=None)
     parser.add_argument('-agg', metavar='agg', type=str,default=None, help='agg binary (defaults to binary in script dir)')
     parser.add_argument('--allow-duplicates', dest='allow_duplicates', action='store_const', const=True,default=False, help='allow duplicate sample names (not recommended)')
-
+    parser.add_argument('--ignore-non-matching-ref', action='store_true',default=False)
     args = parser.parse_args()
     sys.stderr.write(" ".join(sys.argv)+"\n")
 
@@ -48,6 +48,8 @@ if __name__ == "__main__":
         tmp_out=tempfile.mktemp(prefix=os.path.basename(f).split(".")[0],dir=tmp_dir)
 #        tmp_out = "%s/%s"%(tmp_dir,os.path.basename(f).split(".")[0])
         cmd = args.agg + " ingest1 " + f + " -o " + tmp_out + " -f " + args.ref
+        if args.ignore_non_matching_ref:
+            cmd += " --ignore-non-matching-ref"
         sys.stderr.write(cmd+"\n")
         print cmd
         try:

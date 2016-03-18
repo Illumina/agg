@@ -593,7 +593,7 @@ int view1(int argc,char **argv) {
 	{"allow-duplicates",no_argument,NULL,1},
         {0,0,0,0}
     };
-    char *output,*output_type;
+    char *output=NULL,*output_type="b";
     string sample_names;
     bool sample_is_file=0;
     while ((c = getopt_long(argc, argv, "r:@:o:O:s:S:",loptions,NULL)) >= 0) {  
@@ -621,13 +621,17 @@ int view1(int argc,char **argv) {
 
     argc    = argc; argv = argv;  
     optind++;
+    if(optind==argc)
+      die("no input provided");
+
     vector<string> input;
     while(optind<argc) {
       cerr << argv[optind]<<" ";
       input.push_back(argv[optind++]);
     }
     cerr<<endl;
-
+    if(output==NULL)
+      die("no output specified");
     if(fileexists(output))
       die(((string)output)+" exists! Will not overwrite");
 

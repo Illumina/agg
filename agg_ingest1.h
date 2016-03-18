@@ -19,3 +19,5 @@ extern "C" {
 }
 
 
+#define ERR_REF_MISMATCH    -1
+#define CHECK_REF_WARN 1

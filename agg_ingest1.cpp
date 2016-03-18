@@ -97,8 +97,8 @@ public:
       assert(_last_pos<=_buf.front()->pos);
       if(   _last_pos!=_buf.front()->pos )  
 	_seen.clear();
-      bcf1_t *tmp = _buf.front();
 
+      //      bcf1_t *tmp = _buf.front();
       //capitalises ref/alt. this should now be fixed upstream.
       // int i=0;
       // while(tmp->d.allele[0][i]) {
@@ -113,6 +113,7 @@ public:
       // bcf_update_alleles(hdr_out,tmp,(const char**)tmp->d.allele,tmp->n_allele);
 
       string variant=(string)_buf.front()->d.allele[0] +"."+ (string)_buf.front()->d.allele[1];
+
       if(_seen.count(variant)) {
 	_ndup++;
       }
@@ -158,8 +159,7 @@ int decompose(bcf1_t *rec,bcf_hdr_t *hdr,VarBuffer & buf) {
   int altl = strlen(alt);
   int n=0;
   if(refl>1 && refl==altl) {//is MNP
-    char alleles[3];
-    alleles[1]=',';
+    char alleles[4] = "X,X";
     for(int i=0;i<refl;i++) {
       if(ref[i]!=alt[i]) {//new SNP
 	bcf1_t *new_var = bcf_dup(rec);
@@ -179,7 +179,7 @@ int decompose(bcf1_t *rec,bcf_hdr_t *hdr,VarBuffer & buf) {
   return(n);
 }
 
-int ingest1(const char *input,const char *output,char *ref) {
+int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch=true) {
   cerr << "Input: " << input << "\tOutput: "<<output<<endl;
 
   kstream_t *ks;
@@ -220,7 +220,7 @@ int ingest1(const char *input,const char *output,char *ref) {
   if( bcf_hdr_id2int(hdr_in, BCF_DT_ID, "GQX")== -1) die("FORMAT/GQX was not in the GVCF");
   if( bcf_hdr_id2int(hdr_in, BCF_DT_ID, "DP")== -1) die("FORMAT/DP was not in the GVCF");
   hts_close(hfp);
-  //this is a hack to fix broken gvcfs where AD is incorrectly defined in the header.
+  //this is a hack to fix gvcfs where AD is incorrectly defined in the header. (vcf4.2 does not technically allow Number=R)
   bcf_hdr_remove(hdr_in,BCF_HL_FMT,"AD");
   assert(  bcf_hdr_append(hdr_in,"##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed. For indels this value only includes reads which confidently support each allele (posterior prob 0.999 or higher that read contains indicated allele vs all other intersecting indel alleles)\">") == 0);
 
@@ -239,6 +239,7 @@ int ingest1(const char *input,const char *output,char *ref) {
   assert(  bcf_hdr_append(hdr_out,"##FORMAT=<ID=PF,Number=A,Type=Integer,Description=\"variant was PASS filter in original sample gvcf\">") == 0);
 
   args_t *norm_args = init_vcfnorm(hdr_out,ref);
+  norm_args->check_ref |= CHECK_REF_WARN;
   bcf1_t *bcf_rec = bcf_init();
   bcf_hdr_write(variant_fp, hdr_out);
   kstring_t work1 = {0,0,0};            
@@ -322,16 +323,24 @@ int ingest1(const char *input,const char *output,char *ref) {
 	  split_multiallelic_to_biallelics(norm_args,bcf_rec );
 	  for(int i=0;i<norm_args->ntmp_lines;i++){
 	    remove_info(norm_args->tmp_lines[i]);
-	    realign(norm_args,norm_args->tmp_lines[i]);
-	    ndec+=decompose(norm_args->tmp_lines[i],hdr_out,vbuf);
-	    //	    vbuf.push_back(norm_args->tmp_lines[i]);
+	    if(realign(norm_args,norm_args->tmp_lines[i]) != ERR_REF_MISMATCH)
+	      ndec+=decompose(norm_args->tmp_lines[i],hdr_out,vbuf);
+	    else
+	      if(exit_on_mismatch)
+		die("vcf did not match the reference");
+	      else
+		norm_args->nskipped++;
 	  }
 	}
 	else {
 	  remove_info(bcf_rec);
-	  realign(norm_args,bcf_rec);
-	  ndec+=decompose(bcf_rec,hdr_out,vbuf);
-	  //	  vbuf.push_back(bcf_rec);
+	  if( realign(norm_args,bcf_rec) !=  ERR_REF_MISMATCH)
+	    ndec+=decompose(bcf_rec,hdr_out,vbuf);
+	  else
+	    if(exit_on_mismatch)
+	      die("vcf did not match the reference");
+	    else
+	      norm_args->nskipped++;
 	}
 	vbuf.flush(bcf_rec->pos,variant_fp,hdr_out);
       }
@@ -349,7 +358,7 @@ int ingest1(const char *input,const char *output,char *ref) {
   hts_close(variant_fp);
   destroy_data(norm_args);
   fprintf(stderr,"Variant lines   total/split/realigned/skipped:\t%d/%d/%d/%d\n", norm_args->ntotal,norm_args->nsplit,norm_args->nchanged,norm_args->nskipped);
-  fprintf(stderr,"Created %d SNPs from decomposing %d MNPs\n", ndec,0);
+  fprintf(stderr,"Decomposed %d MNPs\n", ndec);
 
 
   fprintf(stderr,"Indexing %s\n",out_fname);
@@ -366,6 +375,7 @@ static void usage(){
   fprintf(stderr, "Required options:\n");
   fprintf(stderr, "    -o, --output <output_prefix>      agg will output output_prefix.bcf and output_prefix.tmp\n");
   fprintf(stderr, "    -f, --fasta-ref <file>            reference sequence\n");
+  fprintf(stderr, "        --ignore-non-matching-ref     skip non-matching ref alleles (will warn)\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n");
   exit(1);
@@ -380,22 +390,28 @@ int ingest_main(int argc,char **argv) {
   static struct option loptions[] =    {
     {"output-file",1,0,'o'},
     {"fasta-ref",1,0,'f'},
+    {"ignore-non-matching-ref",0,0,1},
     {0,0,0,0}
   };
 
+  bool exit_on_mismatch=true;
   while ((c = getopt_long(argc, argv, "o:f:",loptions,NULL)) >= 0) {  
     switch (c)
       {
       case 'o': output = optarg; break;
       case 'f': ref = optarg; break;
-      default: die("Unknown argument:"+(string)optarg+"\n");
+      case 1: exit_on_mismatch=false;break;
+      default: 
+	if(optarg!=NULL) die("Unknown argument:"+(string)optarg+"\n");
+	else die("unrecognised argument");
       }
   }
   if(!output)    die("the -o option is required");
   if(!ref)    die("the -f option is required");
   optind++;
-
-  ingest1(argv[optind],output,ref);
+  if(optind==argc)
+    die("no input provided");
+  ingest1(argv[optind],output,ref,exit_on_mismatch);
   cerr << "Done."<<endl;
   return(0);
 }

@@ -1,3 +1,7 @@
+2015-03-11
+*added --ignore-non-matching-ref flag to ingest1 (issue5)
+*fixed memory issue with MNP splitting in ingest1
+
 2015-03-03
 *fixed a bug related to INFO/DPA annotation in update-info.c plugin
 
