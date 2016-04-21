@@ -21,7 +21,7 @@ The advantage of this approach is that when another 500 samples come along, you 
 The only compilation dependency is [htslib](http://www.htslib.org/) which is included with the software.  
 
 ```
-git clone git@github.com:BEETL/agg.git
+git clone git@github.com:Illumina/agg.git
 cd agg/
 make
 ./agg
