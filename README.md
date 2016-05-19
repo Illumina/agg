@@ -113,7 +113,7 @@ chrQ      100     G    C       0/1
 ```
 should really be:
 ```
-chrQ      100     G    A,C     1/2
+chrQ      100     G    A,C      1/2
 ```
 or perhaps
 ```
