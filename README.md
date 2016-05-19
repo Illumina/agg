@@ -115,10 +115,10 @@ should really be:
 ```
 chrQ      100     G    A,C     1/2
 ```
-or
+or perhaps
 ```
 chrQ      100     G    A,<*>    1/2
-chrQ      100     G    C,<*     1/2
+chrQ      100     G    C,<*>     1/2
 ```
 implementing the correct behaviour is complicated by the fact one of the variants may be non-passing. We face a similar issue with deletions that overlap downstream variants.
 
