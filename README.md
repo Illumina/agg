@@ -105,8 +105,21 @@ tabix merged.sites.vcf.gz
 Genotyping an individual (from their gvcf) who does not have an ALT allele called at SNP location is relatively easy (at least I think so). We simply take the DP and the homref GQ at that base. For indels, things are not so straightforward, I have implemented what I think is a reasonable scheme.  For deletions, agg reports the average depth across the length of the deletion and the minimum homref GQ observed. For insertions, agg reports the average depth of the two bases flanking the insertion and the minimum homref GQ of these two bases. This is of course inferior to proper joint calling where reads are aligned to candidate haplotypes to generate a likelihood for each possible genotype. I would be happy to hear about better alternatives to these rules.
 
 ###Known issues
-Multi-allelic annotations for individuals that are ALT in one (or more) of the alleles might be slightly off. Why? Currently DP/GQ are filled from the .dpt file for an individual if they do not have the variant being processed *regardless* of whether they have a different variant at the same position.  This could be solved by buffering all co-occurring variants which is something we are looking at for future versions.
 
-Currently, one should "trust" the annotations where the variant is typed as ALT over ones where they are typed as HOMREF at the same position.
+Overlapping variants are not correctly genotyped for samples that are ALT for two non-reference alleles. For example:
+```
+chrQ      100     G    A       0/1
+chrQ      100     G    C       0/1
+```
+should really be:
+```
+chrQ      100     G    A,C     1/2
+```
+or
+```
+chrQ      100     G    A,<*>    1/2
+chrQ      100     G    C,<*     1/2
+```
+implementing the correct behaviour is complicated by the fact one of the variants may be non-passing. We face a similar issue with deletions that overlap downstream variants.
 
-
+We decompose MNPs and perform basic left-shifting/trimming of indels (taken from `bcftools norm` implementation. We currently do not decompose complex indels.
