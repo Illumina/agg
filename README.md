@@ -122,4 +122,6 @@ chrQ      100     G    C,<*>     1/2
 ```
 implementing the correct behaviour is complicated by the fact one of the variants may be non-passing. We face a similar issue with deletions that overlap downstream variants.
 
-We decompose MNPs and perform basic left-shifting/trimming of indels (taken from `bcftools norm` implementation. We currently do not decompose complex indels.
+We decompose MNPs and perform basic left-shifting/trimming of indels (taken from `bcftools norm` implementation). We currently do not decompose complex indels.
+
+
