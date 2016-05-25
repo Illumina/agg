@@ -124,4 +124,4 @@ implementing the correct behaviour is complicated by the fact one of the variant
 
 We decompose MNPs and perform basic left-shifting/trimming of indels (taken from `bcftools norm` implementation). We currently do not decompose complex indels.
 
-
+All sites are currently treated as diploid, this is obviously wrong for male chrX, chrY and chrM.  This can be fixed via [post-hoc processing](https://github.com/Illumina/agg/issues/1).
