@@ -75,3 +75,4 @@ if __name__ == "__main__":
         sys.stderr.write("there was a problem. removing temporary files and exiting\n")
         shutil.rmtree(tmp_dir)
         sys.exit(1)
+

@@ -368,8 +368,8 @@ int aggReader::next() {
 	    work[j]=gt[j];
 	  for(int j=0;j<ntmp;j++){
 	    if(work[j]!=bcf_gt_missing) {
-	      gt[2*j]=bcf_gt_unphased(0);
-	      gt[2*j+1]=work[j];
+	      gt[2*j]=work[j];
+	      gt[2*j+1]=bcf_gt_unphased(0);
 	    }
 	    else {
 	      gt[2*j]=bcf_gt_missing;
