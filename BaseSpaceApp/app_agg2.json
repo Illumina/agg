@@ -1,5 +1,5 @@
 {
-"App Name": "AutomaticallyGeneratedApp2",
+"App Name": "Agg part 2",
 "Command": "agg2/bsAppScript2.sh <Choose an aggChunkk appresult:AppResult=5957953>",
 
 "Files": [ "agg2" ],
@@ -8,5 +8,5 @@
 
 "Extra commands to run during docker image creation": [ ],
 
-"Docker repository": "docker.illumina.com/bsuser2/automatically-generated-app2"
+"Docker repository": "docker.illumina.com/bsuser2/automatically-generated-app2:2"
 }
