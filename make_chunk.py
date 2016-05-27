@@ -36,7 +36,7 @@ if __name__ == "__main__":
     tmp_dir = tempfile.mkdtemp(prefix=args.tmp)
     sys.stderr.write("tmp dir: %s\n"%tmp_dir)
     assert os.path.isdir(tmp_dir)
-    gvcfs = open(args.input).read().strip().split()
+    gvcfs = [val.strip() for val in open(args.input).readlines()]
     sys.stderr.write("processing %d gvcfs\n"%len(gvcfs))
 
     ##collate chunks with multiprocessing pool
