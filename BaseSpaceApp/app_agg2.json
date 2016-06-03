@@ -8,5 +8,5 @@
 
 "Extra commands to run during docker image creation": [ ],
 
-"Docker repository": "docker.illumina.com/bsuser2/automatically-generated-app2:2"
+"Docker repository": "docker.illumina.com/bsuser2/automatically-generated-app2:1.0.2"
 }

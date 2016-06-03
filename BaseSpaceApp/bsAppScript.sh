@@ -5,8 +5,11 @@ echo "Starting BaseSpace App: $*"
 echo "Project1=$Project1"
 echo "OUTDIR=$OUTDIR"
 
+export PATH=$PATH:/agg
+
 env
-find /genomes | grep hg19
+df -h
+#find /genomes | grep hg19
 
 ServerUri=`cat /data/input/AppSession.json | jq --raw-output '.OriginatingUri' | sed 's/^https:\/\///'`
 
@@ -22,9 +25,9 @@ cd /data/scratch
 
 #set default min timestamp = 0
 #Go through destination project's appresults (it has to be all of them, we can't restrict it to the current app id, as versioning would change the app id), and try to detect the last one that contains an aggregate result (with its cutoff timestamp and id of its optional input project, which will override the defaults form above)
-outputProjectId=`cat /data/input/AppSession.json | jq --raw-output '.Properties.Items[] | select(.Name=="input.project-id") | .Content.Id'`
+outputProjectId=`cat /data/input/AppSession.json | jq --raw-output '.Properties.Items[] | select(.Name=="Input.project-id") | .Content.Id'`
 #set default input project
-inputProjectId=`cat /data/input/AppSession.json | jq --raw-output '.Properties.Items[] | select(.Name=="input.Project1") | .Content.Id'`
+inputProjectId=`cat /data/input/AppSession.json | jq --raw-output '.Properties.Items[] | select(.Name=="Input.Project1") | .Content.Id'`
 
 #todo loop until find what we want
 #curl -H x-access-token:${AccessToken} "https://api.${ServerUri}/v1pre3/projects/${inputProjectId}/appresults?SortBy=DateCreated&SortDir=desc&limit=1000"
@@ -44,7 +47,7 @@ offset=0
 echo > fileInfos
 #time curl -H x-access-token:${AccessToken} "https://api.${ServerUri}/v1pre3/users/current/appsessions?limit=1024&sortby=DateCreated&sortdir=desc&userCreatedBy=${userId}&status=Complete" > appSessions.json
 while [ 1 ] ; do
-time curl -H x-access-token:${AccessToken} "https://api.${ServerUri}/v1pre3/users/current/appsessions?output.projects=${inputProjectId}&offset=${offset}&limit=${pageSize}&sortby=DateCreated&sortdir=desc&userCreatedBy=${userId}&status=Complete&include=properties&propertyFilters=Output.AppResults" > appSessions.json
+time curl --silent -H x-access-token:${AccessToken} "https://api.${ServerUri}/v1pre3/users/current/appsessions?output.projects=${inputProjectId}&offset=${offset}&limit=${pageSize}&sortby=DateCreated&sortdir=desc&userCreatedBy=${userId}&status=Complete&include=properties&propertyFilters=Output.AppResults" > appSessions.json
 if [ ${offset} == 0 ] ; then cp appSessions.json appSessions0.json ; fi
 #cat appSessions.json | jq -r .Response.Items[].Id | sort -g | uniq > appSessionIds
 count=`cat appSessions.json | jq -r .Response.DisplayedCount`
@@ -57,7 +60,7 @@ cat appSessions.json | jq -r .Response.Items[].Properties.Items[0].Items[].Id > 
 #save first app sessions's timestamp (+1?) as cutoff date for next run
 #go through all appsessions' appresults, and make a list of all vcf file ids
 for id in `cat appResultIds`; do 
-  curl -H x-access-token:${AccessToken} "https://api.${ServerUri}/v1pre3/appresults/${id}/files?limit=1024" > files
+  curl --silent -H x-access-token:${AccessToken} "https://api.${ServerUri}/v1pre3/appresults/${id}/files?limit=1024" > files
   cat files | jq -r '.Response.Items[] | select(.Name | contains("genome.vcf")) | "\(.Id)\t\(.Size)\t\(.Name)"' >> fileInfos
 done
 
@@ -86,7 +89,7 @@ echo -n "all: " > metadata/Makefile
 cut -f 1,3 fileInfos.genome_vcf.restricted fileInfos.genome_vcf_gz.restricted | tr '\t \n' '__ ' >> metadata/Makefile
 echo >> metadata/Makefile
 echo >> metadata/Makefile
-cat fileInfos.genome_vcf.restricted fileInfos.genome_vcf_gz.restricted | awk -v AccessToken=${AccessToken} -v ServerUri=${ServerUri} '{ print $1 "_" $3 ":\n\tcurl -o $@ -H x-access-token:" AccessToken " \"https://api." ServerUri "/v1pre3/files/" $1 "&FileHrefContentResolution=true\"\n" }' >> metadata/Makefile
+cat fileInfos.genome_vcf.restricted fileInfos.genome_vcf_gz.restricted | awk -v AccessToken=${AccessToken} -v ServerUri=${ServerUri} '{ print $1 "_" $3 ":\n\tcurl --silent -o $@ -H x-access-token:" AccessToken " \"https://api." ServerUri "/v1pre3/files/" $1 "&FileHrefContentResolution=true\"\n" }' >> metadata/Makefile
 
 #download all metadata
 cd metadata
@@ -100,12 +103,12 @@ echo -n "all: " > headers/Makefile
 cut -f 1,3 fileInfos.genome_vcf.restricted fileInfos.genome_vcf_gz.restricted | tr '\t \n' '__ ' >> headers/Makefile
 echo >> headers/Makefile
 echo >> headers/Makefile
-cat fileInfos.genome_vcf.restricted | awk -v AccessToken=${AccessToken} -v ServerUri=${ServerUri} '{ print $1 "_" $3 ":\n\tcurl --retry 3 -o $@ -LH x-access-token:" AccessToken " \"https://api." ServerUri "/v1pre3/files/" $1 "/content\" --range 0-8192\n" }' >> headers/Makefile
-cat fileInfos.genome_vcf_gz.restricted | awk -v AccessToken=${AccessToken} -v ServerUri=${ServerUri} '{ print $1 "_" $3 ":\n\tcurl --retry 3 -o $@ -LH x-access-token:" AccessToken " \"https://api." ServerUri "/v1pre3/files/" $1 "/content\" --range 0-8192 && ( zcat $@ > $@.uncompressed 2> /dev/null ; true )\n" }' >> headers/Makefile
+cat fileInfos.genome_vcf.restricted | awk -v AccessToken=${AccessToken} -v ServerUri=${ServerUri} '{ print $1 "_" $3 ":\n\tcurlWithRetry --silent --retry 3 -o $@ -LH x-access-token:" AccessToken " \"https://api." ServerUri "/v1pre3/files/" $1 "/content\" --range 0-8192\n" }' >> headers/Makefile
+cat fileInfos.genome_vcf_gz.restricted | awk -v AccessToken=${AccessToken} -v ServerUri=${ServerUri} '{ print $1 "_" $3 ":\n\tcurlWithRetry --silent --retry 3 -o $@ -LH x-access-token:" AccessToken " \"https://api." ServerUri "/v1pre3/files/" $1 "/content\" --range 0-8192 && ( zcat $@ > $@.uncompressed 2> /dev/null ; true )\n" }' >> headers/Makefile
 
 #download all headers
 cd headers
-make -j 32
+make -j 16
 cd ..
 
 
@@ -134,12 +137,12 @@ echo -n "all: " > downloadedFiles/Makefile
 cut -f 1,3 ${LIST_OF_FILES_TO_DOWNLOAD} | tr '\t \n' '__ ' >> downloadedFiles/Makefile
 echo >> downloadedFiles/Makefile
 echo >> downloadedFiles/Makefile
-cat ${LIST_OF_FILES_TO_DOWNLOAD} | awk -v AccessToken=${AccessToken} -v ServerUri=${ServerUri} '{ print $1 "_" $3 ":\n\tcurl --retry 3 -o $@ -LH x-access-token:" AccessToken " \"https://api." ServerUri "/v1pre3/files/" $1 "/content\"\n" }' >> downloadedFiles/Makefile
+cat ${LIST_OF_FILES_TO_DOWNLOAD} | awk -v AccessToken=${AccessToken} -v ServerUri=${ServerUri} '{ print $1 "_" $3 ":\n\tcurlWithRetry --silent --retry 3 -o $@ -LH x-access-token:" AccessToken " \"https://api." ServerUri "/v1pre3/files/" $1 "/content\"\n" }' >> downloadedFiles/Makefile
 
 
 #download all vcfs
 cd downloadedFiles
-make -j 32
+make -j 16
 #for i in `cut -f 1,3 fileInfos.genome_vcf fileInfos.genome_vcf_gz | tr '\t ' '__'`; do id=${i%_*}; name=${i#*_}; echo "$i $id $name" ; curl -o downloadedFiles/${i} -LH x-access-token:${AccessToken} "https://api.${ServerUri}/v1pre3/files/${id}/content" ; done
 
 # decompress vcf.gz (needed?)
@@ -148,5 +151,11 @@ make -j 32
 # Run agg
 ls *vcf *.vcf.gz > chunk1
 mkdir ../chunks
-time python ~/agg/make_chunk.py chunk1 -o ${OUTDIR}/aggChunk -ref /genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa -tmp `pwd` --allow-duplicates -nproc 32
+time python ~/agg/make_chunk.py chunk1 -o ${OUTDIR}/aggChunk -ref /genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa -tmp `pwd` --allow-duplicates -nproc 32 | tee ${OUTDIR}/mylog
+
+
+# Temporary, for debugging
+#cd /data/scratch
+#mkdir ${OUTDIR}/scratch
+#mv * ${OUTDIR}/scratch/
 

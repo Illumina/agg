@@ -28,7 +28,9 @@ S3_DATA=/data/scratch/s3
 
 #cd "/basespace/ljanin./hoth_basespaceuser2/Projects/AutomaticallyGeneratedAppTest/AppResults/kmers (2)/Files"
 # execute the following in parallel with the db download
-time agg genotype -r chr21 ${InputAppResultDir}/aggChunk.bcf -Ob -o merged.chr21.bcf & # 1min
+for i in `seq 1 22` X ; do
+  time agg genotype -r chr${i} ${InputAppResultDir}/aggChunk.bcf -Ob -o merged.chr${i}.bcf & # 1min
+done
 
 
 # Download db files
@@ -42,37 +44,44 @@ for i in \
 wait
 
 
-input=merged.chr21.bcf 
-bcftools index ${input}
+for i in `seq 1 22` X ; do
+ (
+  input=merged.chr${i}.bcf 
+  bcftools index ${input}
 
-#basic summary of number of sites, intersection with 1000G, etc.
-time bcftools stats $input ${S3_DATA}/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.vcf.gz > stats.txt # 4.5min
-plot-vcfstats stats.txt -p stats_dir/ # fails quickly
+  # basic summary of number of sites, intersection with 1000G, etc.
+  time bcftools stats $input ${S3_DATA}/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.vcf.gz > stats_chr${i}.txt # 4.5min
+  plot-vcfstats stats_chr${i}.txt -p stats_chr${i}_dir/ # fails quickly
+ ) &
+done
+wait
 
 #Rudy's tool for PCA
-NO_OR_WITH=no
-time akt pca -w ${AKT_DATA}/1000G.snps.${NO_OR_WITH}chr.vcf.gz  ${S3_DATA}/ALL.cgi_multi_sample.20130725.snps_indels.high_coverage_cgi.normalized.uniq.genotypes.gtonly.cr90.ic10.bcf > pca.txt # 1min
-Rscript ${AKT_SCRIPTS}/1000G_pca.R pca.txt > 1000G_pca.txt # null device
+#NO_OR_WITH=no
+#time akt pca -w ${AKT_DATA}/1000G.snps.${NO_OR_WITH}chr.vcf.gz  ${S3_DATA}/ALL.cgi_multi_sample.20130725.snps_indels.high_coverage_cgi.normalized.uniq.genotypes.gtonly.cr90.ic10.bcf > pca.txt # 1min
+#Rscript ${AKT_SCRIPTS}/1000G_pca.R pca.txt > 1000G_pca.txt # null device
 
 
 
 # 
-#akt ibd ${S3_DATA}/ALL.cgi_multi_sample.20130725.snps_indels.high_coverage_cgi.normalized.uniq.genotypes.gtonly.cr90.ic10.bcf -T ${AKT_DATA}/1000G.snps.nochr.vcf.gz -n 32 > kin.txt
-time akt kin ${S3_DATA}/ALL.cgi_multi_sample.20130725.snps_indels.high_coverage_cgi.normalized.uniq.genotypes.gtonly.cr90.ic10.bcf -T ${AKT_DATA}/1000G.snps.nochr.vcf.gz -n 32 > kin.txt # 1.5min
-akt relatives kin.txt > fam.txt
-(
-grep '^Dup' fam.txt | awk '{print $1}' | uniq | awk 'END {printf "%s Duplicates\n", NR}'
-grep '^Unrel' fam.txt | awk '{print $1}' | uniq | awk 'END {printf "%s Unrelated\n", NR}'
-grep '^Fam' fam.txt | awk '{print $1}' | uniq | awk 'END {printf "%s Families\n", NR}'
-grep 'Parent' fam.txt | awk 'END {printf "%s Parent/Child pairs\n", NR}'
-grep 'Sibling' fam.txt | awk 'END {printf "%s Sibling pairs\n", NR}'
-grep 'Second-order' fam.txt | awk 'END {printf "%s Second-order pairs\n", NR}'
-) > fam_out.txt
+##akt ibd ${S3_DATA}/ALL.cgi_multi_sample.20130725.snps_indels.high_coverage_cgi.normalized.uniq.genotypes.gtonly.cr90.ic10.bcf -T ${AKT_DATA}/1000G.snps.nochr.vcf.gz -n 32 > kin.txt
+#time akt kin ${S3_DATA}/ALL.cgi_multi_sample.20130725.snps_indels.high_coverage_cgi.normalized.uniq.genotypes.gtonly.cr90.ic10.bcf -T ${AKT_DATA}/1000G.snps.nochr.vcf.gz -n 32 > kin.txt # 1.5min
+#akt relatives kin.txt > fam.txt
+#(
+#grep '^Dup' fam.txt | awk '{print $1}' | uniq | awk 'END {printf "%s Duplicates\n", NR}'
+#grep '^Unrel' fam.txt | awk '{print $1}' | uniq | awk 'END {printf "%s Unrelated\n", NR}'
+#grep '^Fam' fam.txt | awk '{print $1}' | uniq | awk 'END {printf "%s Families\n", NR}'
+#grep 'Parent' fam.txt | awk 'END {printf "%s Parent/Child pairs\n", NR}'
+#grep 'Sibling' fam.txt | awk 'END {printf "%s Sibling pairs\n", NR}'
+#grep 'Second-order' fam.txt | awk 'END {printf "%s Second-order pairs\n", NR}'
+#) > fam_out.txt
 
 
 ls -lartR
+rm -rf ${S3_DATA}
 
-find . -maxdepth 1 -type f -size '-1000k' -print -exec mv {} ${OUTDIR}/ \;
+#find . -maxdepth 1 -type f -size '-1000k' -print -exec mv {} ${OUTDIR}/ \;
+mv * ${OUTDIR}/
 
 ls -lartR
 

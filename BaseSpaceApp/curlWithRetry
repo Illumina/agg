@@ -1,0 +1,8 @@
+#!/bin/bash
+
+COMMAND="curl -C - $*"
+until $COMMAND; do
+    echo retrying: $COMMAND
+    sleep 1
+done
+
