@@ -15,7 +15,11 @@ For example, if you had 3000 gvcfs, your pipeline might be:
 
 The advantage of this approach is that when another 500 samples come along, you only have to build one new chunk (step 1) and then re-genotype from the 6+1=7 chunks to create a 3500 sample bcf (step 2). This is faster than merging from all gvcfs every time some new samples arrive.
 
-**Note:** if you are working with relatively few gvcfs, then [gvcftools](https://github.com/sequencing/gvcftools) merge_variants is more appropriate.  The agg pipeline is more complex to run and is geared towards 1000s of gvcfs.
+**Note:** 
+
+If you are working with relatively few gvcfs, then [gvcftools](https://github.com/sequencing/gvcftools) merge_variants is more appropriate.  The agg pipeline is more complex to run and is geared towards 1000s of gvcfs.
+
+This tool is designed for WGS data. It is not currently appropriate for exome data.
 
 ###Installation
 The only compilation dependency is [htslib](http://www.htslib.org/) which is included with the software.  
