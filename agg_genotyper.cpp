@@ -201,7 +201,16 @@ int aggReader::syncBuffer() {
       }   
       dp_open=moveDepthForward();
       if(DEBUG>1) cerr << "dp_pos="<<dp_pos<<endl;
-    }
+    } else if (dp_pos >= var_stop)
+      // if no syncing possible and pd_pos has already var_stop, no point in continuing.
+      // This happens if first variant in bcf file is not present in dp_pos file.
+      for(int i=0;i<_nsample;i++) {
+	if(!dp_buf[i].empty()) break;
+	cerr << "could not sync position var_pos = (" <<var_start <<","<<var_stop
+	     << ")  var_type=" <<var_type
+	     << " nsync=" << nsync <<endl;
+	return 0;
+      }
     if(dp_chr!=cur_chr || !dp_open) break;
   }
 
