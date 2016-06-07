@@ -1,4 +1,4 @@
-agg: a utility for aggregating gvcfs. This software is not commercially supported.
+agg: a utility for aggregating Illumina-style GVCFs. This software is not commercially supported.
 
 Copyright (c) 2016, Illumina, Inc. All rights reserved. 
 
