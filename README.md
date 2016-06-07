@@ -21,6 +21,8 @@ If you are working with relatively few gvcfs, then [gvcftools](https://github.co
 
 This tool is designed for WGS data. It is not currently appropriate for exome data.
 
+There are various flavours of GVCF in the wild, this tool only works with format [produced by Illumina pipelines](https://sites.google.com/site/gvcftools/home/about-gvcf).
+
 ###Installation
 The only compilation dependency is [htslib](http://www.htslib.org/) which is included with the software.  
 
