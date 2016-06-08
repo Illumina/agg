@@ -28,6 +28,7 @@ cd /data/scratch
 outputProjectId=`cat /data/input/AppSession.json | jq --raw-output '.Properties.Items[] | select(.Name=="Input.project-id") | .Content.Id'`
 #set default input project
 inputProjectId=`cat /data/input/AppSession.json | jq --raw-output '.Properties.Items[] | select(.Name=="Input.Project1") | .Content.Id'`
+inputProjectName=`bs list projects -f csv | grep "\"${inputProjectId}\"" | cut -d '"' -f 4`
 
 #todo loop until find what we want
 #curl -H x-access-token:${AccessToken} "https://api.${ServerUri}/v1pre3/projects/${inputProjectId}/appresults?SortBy=DateCreated&SortDir=desc&limit=1000"
@@ -46,16 +47,17 @@ pageSize=1024
 offset=0
 echo > fileInfos
 #time curl -H x-access-token:${AccessToken} "https://api.${ServerUri}/v1pre3/users/current/appsessions?limit=1024&sortby=DateCreated&sortdir=desc&userCreatedBy=${userId}&status=Complete" > appSessions.json
-while [ 1 ] ; do
-time curl --silent -H x-access-token:${AccessToken} "https://api.${ServerUri}/v1pre3/users/current/appsessions?output.projects=${inputProjectId}&offset=${offset}&limit=${pageSize}&sortby=DateCreated&sortdir=desc&userCreatedBy=${userId}&status=Complete&include=properties&propertyFilters=Output.AppResults" > appSessions.json
-if [ ${offset} == 0 ] ; then cp appSessions.json appSessions0.json ; fi
-#cat appSessions.json | jq -r .Response.Items[].Id | sort -g | uniq > appSessionIds
-count=`cat appSessions.json | jq -r .Response.DisplayedCount`
-if [ "${count}" == "null" ] ; then exit 1; fi
-if [ "x${count}" == "x" ] ; then exit 2; fi
-if [ ${count} == 0 ] ; then break; fi
-cat appSessions.json | jq -r .Response.Items[].Properties.Items[0].Items[].Id > appResultIds 2> /dev/null
 
+#while [ 1 ] ; do
+#time curl --silent -H x-access-token:${AccessToken} "https://api.${ServerUri}/v1pre3/users/current/appsessions?output.projects=${inputProjectId}&offset=${offset}&limit=${pageSize}&sortby=DateCreated&sortdir=desc&userCreatedBy=${userId}&status=Complete&include=properties&propertyFilters=Output.AppResults" > appSessions.json
+#if [ ${offset} == 0 ] ; then cp appSessions.json appSessions0.json ; fi
+##cat appSessions.json | jq -r .Response.Items[].Id | sort -g | uniq > appSessionIds
+#count=`cat appSessions.json | jq -r .Response.DisplayedCount`
+#if [ "${count}" == "null" ] ; then exit 1; fi
+#if [ "x${count}" == "x" ] ; then exit 2; fi
+#if [ ${count} == 0 ] ; then break; fi
+#cat appSessions.json | jq -r .Response.Items[].Properties.Items[0].Items[].Id > appResultIds 2> /dev/null
+bs list appresults --project-name "${inputProjectName}" --terse > appResultIds
 
 #save first app sessions's timestamp (+1?) as cutoff date for next run
 #go through all appsessions' appresults, and make a list of all vcf file ids
@@ -64,8 +66,9 @@ for id in `cat appResultIds`; do
   cat files | jq -r '.Response.Items[] | select(.Name | contains("genome.vcf")) | "\(.Id)\t\(.Size)\t\(.Name)"' >> fileInfos
 done
 
-let offset=offset+pageSize
-done
+#let offset=offset+pageSize
+#done
+
 
 
 
@@ -157,5 +160,6 @@ time python ~/agg/make_chunk.py chunk1 -o ${OUTDIR}/aggChunk -ref /genomes/Homo_
 # Temporary, for debugging
 #cd /data/scratch
 #mkdir ${OUTDIR}/scratch
+#ls -laR > ${OUTDIR}/scratch/find.txt
 #mv * ${OUTDIR}/scratch/
 
