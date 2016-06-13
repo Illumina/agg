@@ -28,8 +28,13 @@ S3_DATA=/data/scratch/s3
 
 #cd "/basespace/ljanin./hoth_basespaceuser2/Projects/AutomaticallyGeneratedAppTest/AppResults/kmers (2)/Files"
 # execute the following in parallel with the db download
-for i in `seq 1 22` X ; do
-  time agg genotype -r chr${i} ${InputAppResultDir}/aggChunk.bcf -Ob -o merged.chr${i}.bcf & # 1min
+
+# Discover chunks
+CHUNKS=`find /data/input/appresults -name aggChunk.bcf -print`
+echo CHUNKS=${CHUNKS}
+
+for i in `seq 1 22` X Y ; do
+  time agg genotype -r chr${i} ${CHUNKS} -Ob -o merged.chr${i}.bcf & # 1min
 done
 
 
@@ -44,7 +49,7 @@ for i in \
 wait
 
 
-for i in `seq 1 22` X ; do
+for i in `seq 1 22` X Y ; do
  (
   input=merged.chr${i}.bcf 
   bcftools index ${input}
