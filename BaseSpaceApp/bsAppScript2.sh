@@ -33,8 +33,8 @@ S3_DATA=/data/scratch/s3
 CHUNKS=`find /data/input/appresults -name aggChunk.bcf -print`
 echo CHUNKS=${CHUNKS}
 
-for i in `seq 1 22` X Y ; do
-  time agg genotype -r chr${i} ${CHUNKS} -Ob -o merged.chr${i}.bcf & # 1min
+for i in 21 22 `seq 1 20` X Y ; do
+  time agg genotype -r chr${i} ${CHUNKS} -Ob -o merged.chr${i}.bcf  # 1min
 done
 
 
@@ -49,17 +49,14 @@ for i in \
 wait
 
 
-for i in `seq 1 22` X Y ; do
- (
+for i in 21 22 `seq 1 20` X Y ; do
   input=merged.chr${i}.bcf 
   bcftools index ${input}
 
   # basic summary of number of sites, intersection with 1000G, etc.
   time bcftools stats $input ${S3_DATA}/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.vcf.gz > stats_chr${i}.txt # 4.5min
   plot-vcfstats stats_chr${i}.txt -p stats_chr${i}_dir/ # fails quickly
- ) &
 done
-wait
 
 #Rudy's tool for PCA
 #NO_OR_WITH=no
