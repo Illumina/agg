@@ -1,3 +1,6 @@
+2016-06-22
+*added the denovo plugin
+
 2016-05-26
 *bugfix: related to inconsistent padding of "hemizygous" sites with reference zeroes
 *minor improvements to error handling in make_chunks.py
