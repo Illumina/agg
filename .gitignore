@@ -1,7 +1,7 @@
 *.o
 *~
 *.a
-agg 
+/agg
 version.h
 *.pico
 gmon.out
