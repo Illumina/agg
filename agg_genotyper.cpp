@@ -249,12 +249,13 @@ int aggReader::setDepth() {
       b=var_stop;
       int   var_len=b-a+1;
       float num=0;
-      int min_gq = 10000;
+      int min_gq = bcf_int32_missing;
       while(it1!=dp_buf[i].end() && it1->stop < a) 
 	it1++;
-
-      while(it1!=dp_buf[i].end() && it1->start <= b) {
-	if(it1->depth!=bcf_int32_missing) {	//summing DP
+      while(it1!=dp_buf[i].end() && it1->start <= b) 
+      {
+	if(it1->depth!=bcf_int32_missing) 	//summing DP
+	{
 	  if(it1->start <= a && it1->stop >= b) 
 	    num += it1->depth * var_len;	
 	  else if(it1->start<=a)
@@ -263,9 +264,13 @@ int aggReader::setDepth() {
 	    num += (b - it1->start + 1)*it1->depth;
 	}
 	//GQ. simply finding the mingq across the region.
-	if( (a<=it1->start && b>=it1->start) || (a<=it1->stop && b>=it1->stop) )
-	  if(it1->gq==bcf_int32_missing||it1->gq < min_gq)
+	if( (a<=it1->start && b>=it1->start) || (a<=it1->stop && b>=it1->start) )
+	{
+	  if(min_gq==bcf_int32_missing||it1->gq < min_gq)
+	  {
 	    min_gq = it1->gq;
+	  }
+	}
 	it1++;
       }
       _out_dp[i] = (int)(round(num/(float)var_len));

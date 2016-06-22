@@ -1,4 +1,5 @@
 2016-06-22
+*fixed a bug that could caused incorrect GQ on homref GTs at deletions
 *added the denovo plugin
 
 2016-05-26
