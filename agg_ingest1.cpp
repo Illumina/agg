@@ -1,4 +1,5 @@
 #include "agg_ingest1.h"
+//#define DEBUG
 
 static void remove_hdr_lines(bcf_hdr_t *hdr, int type)
 {
@@ -97,20 +98,6 @@ public:
       assert(_last_pos<=_buf.front()->pos);
       if(   _last_pos!=_buf.front()->pos )  
 	_seen.clear();
-
-      //      bcf1_t *tmp = _buf.front();
-      //capitalises ref/alt. this should now be fixed upstream.
-      // int i=0;
-      // while(tmp->d.allele[0][i]) {
-      // 	tmp->d.allele[0][i]=toupper(tmp->d.allele[0][i]);
-      // 	i++;
-      // }
-      // i=0;
-      // while(tmp->d.allele[1][i]) {
-      // 	tmp->d.allele[1][i]=toupper(tmp->d.allele[1][i]);
-      // 	i++;
-      // }
-      // bcf_update_alleles(hdr_out,tmp,(const char**)tmp->d.allele,tmp->n_allele);
 
       string variant=(string)_buf.front()->d.allele[0] +"."+ (string)_buf.front()->d.allele[1];
 
@@ -217,6 +204,13 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
   ks = ks_init(fp);
   htsFile *hfp=hts_open(input, "r");
   bcf_hdr_t *hdr_in =  bcf_hdr_read(hfp);
+  if(bcf_hdr_id2int(hdr_in, BCF_DT_ID, "GQX")==-1)
+      die("FORMAT/GQX is not present");
+  if(bcf_hdr_id2int(hdr_in, BCF_DT_ID, "DP")==-1)
+      die("FORMAT/DP is not present");
+  if(bcf_hdr_id2int(hdr_in, BCF_DT_ID,"BLOCKAVG_min30p3a")==-1)
+     die("INFO/BLOCKAVG_min30p3a is not present");
+
   hts_close(hfp);
   //this is a hack to fix gvcfs where AD is incorrectly defined in the header. (vcf4.2 does not technically allow Number=R)
   bcf_hdr_remove(hdr_in,BCF_HL_FMT,"AD");
@@ -282,11 +276,11 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
       ptr  = kstrtok(NULL,NULL,&aux);//FORMAT
       //find index of DP (if present)
       //if not present, dont output anything (indels ignored)
-
-      char *DP_ptr = find_format(ptr,"DP");
+      
+      char *DP_ptr = find_format(ptr,"DP:");
       if(DP_ptr!=NULL) {
 	buf[3]=atoi(DP_ptr);
-	char *GQX_ptr = find_format(ptr,"GQX");
+	char *GQX_ptr = find_format(ptr,"GQX:");
 	assert(GQX_ptr!=NULL);
 	
 	//trying to reduce entropy on GQ to get better compression performance.
@@ -295,8 +289,9 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
 	buf[4]=atoi(GQX_ptr)/10;
 	buf[4]*=10;
 	if(buf[4]>100) buf[4]=100;
-
-	//	printf("%d\t%d\t%d\t%d\t%d\n",buf[0],buf[1],buf[2],buf[3],buf[4]);
+#ifdef DEBUG
+	fprintf(stderr,"%d\t%d\t%d\t%d\t%d\n",buf[0],buf[1],buf[2],buf[3],buf[4]);
+#endif 
 	if(gzwrite(depth_fp,buf,5*sizeof(int))!=(5*sizeof(int)))
 	  die("ERROR: problem writing "+(string)out_fname+".tmp");
       }
