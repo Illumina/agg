@@ -93,7 +93,7 @@ public:
 	if(x[i]>=_bins[b] && x[i]<_bins[b+1])
 	  x1.push_back(y[i]);
       madian(x1,_median[b],_mad[b]);
-      //      cerr << b<<" n="<<x1.size()<<"\nmedian="<<_median[b]<<"\nmad="<<_mad[b]<<endl;
+      cerr <<"("<<_bins[b]<<","<<_bins[b+1]<<") "<< b<<" n="<<x1.size()<<"\nmedian="<<_median[b]<<"\nmad="<<_mad[b]<<endl;
       x1.clear();
     }
     return(0);
@@ -102,6 +102,7 @@ public:
   float residual(float x,float y) {
     int b=0;
     while(b<_nbin&&_bins[b]<=x) b++;
+    //    cerr << x << " "<<b<<endl;
     b--;
     if(!(b>=0&&b<_nbin)) {
       cerr <<"x="<<x<<endl;
@@ -235,7 +236,7 @@ int Standardiser::standardise() {
     assert(      bcf_get_info_int32(_hdr,line,"DP",&ptr,&nval) == 1);
     ptr=&ac;
     assert(      bcf_get_info_int32(_hdr,line,"AC",&ptr,&nval) == 1);
-    //    ptr=&an;    assert(      bcf_get_info_int32(_hdr,line,"AN",&ptr,&nval) == 1);
+    ptr=&an;    assert(      bcf_get_info_int32(_hdr,line,"AN",&ptr,&nval) == 1);
     ptr=&dpf;
     assert(      bcf_get_info_int32(_hdr,line,"DPF",&ptr,&nval) == 1);
     ptr=&dpa;

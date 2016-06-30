@@ -29,7 +29,18 @@ public:
   
 };
 
-int power(char *vcf1,char *vcf2) {
+int getQuantiles(char *vcf,char *tag,vector<float> & quantiles)
+{
+  bcf_srs_t *sr =  bcf_sr_init() ;  
+  sr->require_index=1;
+  if(!bcf_sr_add_reader (sr, vcf))    die("Problem opening vcf1");
+  while(bcf_sr_next_line (sr))     {
+    
+  }
+  
+}
+
+int power(char *vcf1,char *vcf2,char *tag) {
   bcf_srs_t *sr =  bcf_sr_init() ;  
   sr->require_index=1;
   if(!bcf_sr_add_reader (sr, vcf1))    die("Problem opening vcf1");
@@ -85,7 +96,8 @@ static void usage(){
   fprintf(stderr, "\n");
   fprintf(stderr, "Required options:\n");
   fprintf(stderr, "    -1, --vcf1      list of nominal variants\n");
-  fprintf(stderr, "    -2, --vcf2      list of high quality variants from population requencing study\n");
+  fprintf(stderr, "    -2, --vcf2      list of high quality variants\n");
+  fprintf(stderr, "    -a, --annotation  annotation to stratify on (defaults to QUAL)\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "\n");
   exit(1);
@@ -96,13 +108,15 @@ int power1(int argc,char **argv) {
   static struct option loptions[] =    {
     {"vcf1",required_argument,NULL,'1'},
     {"vcf2",required_argument,NULL,'2'},
+    {"annotation",0,NULL,'a'},
     {0,0,0,0}
   };
-  char *vcf1=NULL,*vcf2=NULL;
+  char *vcf1=NULL,*vcf2=NULL,*ann=NULL;
   if(argc<2) usage();
-  while ((c = getopt_long(argc, argv, "1:2:",loptions,NULL)) >= 0) {  
+  while ((c = getopt_long(argc, argv, "1:2:a:",loptions,NULL)) >= 0) {  
     switch (c)
       {
+      case 'a': ann = optarg; break;
       case '1': vcf1 = optarg; break;
       case '2': vcf2 = optarg; break;
       default: usage();
@@ -111,6 +125,6 @@ int power1(int argc,char **argv) {
   optind++;
   if(!vcf1&&!vcf2)
     die("missing arg");
-  power(vcf1,vcf2);
+  power(vcf1,vcf2,ann);
   return(0);
 }
