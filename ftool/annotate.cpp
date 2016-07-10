@@ -22,19 +22,19 @@ using namespace std;
 int madian(vector<float> & x,float & median,float & mad) {
   assert(x.size()>1);
   sort(x.begin(),x.end());
-  vector<float> r;
-  r.resize(x.size());
+  //  vector<float> r;
+  //  r.resize(x.size());
   if(x.size()%2==1) 
     median = x[x.size()/2];
   else 
     median = ( (float)x[x.size()/2] + (float)x[x.size()/2+1] ) / 2;
   for(int i=0;i<x.size();i++)
-    r[i] = fabs((float)(x[i]-median));
-  sort(r.begin(),r.end()); 
+    x[i] = fabs((float)(x[i]-median));
+  sort(x.begin(),x.end()); 
   if(x.size()%2==1) 
-    mad = r[r.size()/2];
+    mad = x[x.size()/2];
   else 
-    mad = ( (float)r[r.size()/2] + (float)r[r.size()/2+1] ) / 2;
+    mad = ( (float)x[x.size()/2] + (float)x[x.size()/2+1] ) / 2;
   mad *= 1.4826;
   return(0);
 }
@@ -81,6 +81,7 @@ public:
   };
 
   int fit(vector<float> & x,vector<float> & y) {
+    cerr<<"fitting"<<endl;
     assert(_nbin>0);
     vector<float> x1;
     x1.reserve(x.size()/_nbin);
@@ -170,8 +171,8 @@ int Standardiser::estimateParameters() {
   // dpa_dpf.size.reserve(100e6);
   double n_dpf=0;
   double n_dpa=0;
-  depth.reserve(100e6);
-  alt_count.reserve(100e6);
+  depth.reserve(50e6);
+  alt_count.reserve(50e6);
   int maxn=0;
   while(bcf_sr_next_line (_sr)) { 
     assert(bcf_sr_has_line(_sr,0));  
