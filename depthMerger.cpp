@@ -8,8 +8,9 @@ void depthReader::open(const char *depth_fname) {
     cerr<<"problem opening "<< depth_fname<<endl;
     exit(1);
   }
+  assert(  gzread(_fp,_buf,20) );
+  //  for(int i=0;i<5;i++) cerr << _buf[i] << " "; cerr << endl;
   _open=true;
-  next();
 }
 
 bool depthReader::next() {
@@ -31,28 +32,18 @@ bcf_hdr_t *depthMerger::makeDepthHeader() {
   bcf_hdr_append(_hdr, "##source=agg");
   bcf_hdr_append(_hdr,"##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Filtered basecall depth used for site genotyping\">");
   bcf_hdr_append(_hdr,"##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">");
-  char clash_prefix[10]; //prefix for duplicated samples (borrowed from vcfmerge.c)
+
   for(int i=0;i<_nsample;i++) {
-    snprintf(clash_prefix,10,"%d",i+1);
     bcf_hdr_t *src_hdr = sr->readers[i].header;
     if(i==0) copyContigs(src_hdr,_hdr);
     if(bcf_hdr_nsamples(src_hdr)!=1) {
       cerr<<"ERROR: file "<<sr->readers[i].fname<<" had >1 sample.  This cannot be output from agg ingest1!"<<endl;
       exit(1);
     }
-    char *name=src_hdr->samples[0];
-    if ( bcf_hdr_id2int(_hdr, BCF_DT_SAMPLE, name)!=-1 ) {
-      if(!_force_samples)
-	die("duplicate sample names.\n Try --allow-duplicates if you want to merge anyway");
-      
-      int len = strlen(src_hdr->samples[0]) + strlen(clash_prefix) + 1;
-      name = (char*) malloc(sizeof(char)*(len+1));
-      sprintf(name,"%s:%s",clash_prefix,src_hdr->samples[0]);
-      bcf_hdr_add_sample(_hdr,name);
-      free(name);     
-    }
-    else
-      bcf_hdr_add_sample(_hdr,name);      
+    char *sample_name=src_hdr->samples[0];
+    if ( bcf_hdr_id2int(_hdr, BCF_DT_SAMPLE, sample_name)!=-1 )
+      die("duplicate sample names. use --force-samples if you want to merge anyway");
+    bcf_hdr_add_sample(_hdr,sample_name);      
   }
   bcf_hdr_sync(_hdr);
   cerr<<  bcf_hdr_nsamples(_hdr) << " samples in merged chunk"<<endl;
@@ -71,12 +62,8 @@ int depthMerger::setThreads(int nthreads) {
   return(_nthreads);
 }
 
-void depthMerger::setForceSamples(int f) {
-  _force_samples=f;
-}
-
-depthMerger::depthMerger(vector<string> & files,bool force_samples) {
-  setForceSamples(force_samples);
+depthMerger::depthMerger(vector<string> & files) {
+  
   _nthreads=1;
   _files = files;
   _eof_warn=false;

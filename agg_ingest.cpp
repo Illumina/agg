@@ -102,7 +102,7 @@ int ingest1(const char *input,const char*output) {
   args_t *norm_args = init_vcfnorm(hdr);
 
 
-  //this is a hack to fix broken gvcfs where AD is incorrectly defined in the header.
+  //AD should be Type=R but this is not allowed in vcf4.1
   bcf_hdr_remove(hdr,BCF_HL_FMT,"AD");
   assert(  bcf_hdr_append(hdr,"##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed. For indels this value only includes reads which confidently support each allele (posterior prob 0.999 or higher that read contains indicated allele vs all other intersecting indel alleles)\">") == 0);
 

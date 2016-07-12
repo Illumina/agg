@@ -31,7 +31,7 @@ class variantRow {
 
 class aggReader {
  public:
-  aggReader(const vector<string>& input_file,const string &region,bool force_samples=false);
+  aggReader(const vector<string>& input_file,const string &region);
   ~aggReader();
   int writeVcf(const char *output_file,char *output_type,int n_threads=0);//writes out a (homref called) vcf/bcf
   //  int writeDepthMatrix();//prints a depth matrix to stdout.
@@ -67,5 +67,4 @@ class aggReader {
   int line_count;
   int moveDepthForward();
   int interval_start,interval_end;//the region specified.
-  bool _force_samples;
 };

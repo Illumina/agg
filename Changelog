@@ -1,11 +1,20 @@
-2015-03-11
+2016-06-23
+*fixed several bugs related to homref genotyping in ingest1/genotype (see issue 15)
+*remove the fill-AN-AC-bygroup plug since a better plugin is now available in bcftools
+*added the denovo plugin
+
+2016-05-26
+*bugfix: related to inconsistent padding of "hemizygous" sites with reference zeroes
+*minor improvements to error handling in make_chunks.py
+
+2016-03-11
 *added --ignore-non-matching-ref flag to ingest1 (issue5)
 *fixed memory issue with MNP splitting in ingest1
 
-2015-03-03
+2016-03-03
 *fixed a bug related to INFO/DPA annotation in update-info.c plugin
 
-2015-02-23
+2016-02-23
 *agg genotype now includes FORMAT/DPF (alt genotypes only)
 *the update-info plugin now calculates the INFO/AB field
 

@@ -36,7 +36,17 @@ typedef struct {
 } pedigree;
 
 bcf_hdr_t *in_hdr, *out_hdr;
+//GT:GQ:DP:DPF:AD:PF
 int *gt = NULL, ngt = 0;
+int32_t *gq,ngq=0;
+int mingq=10;//"denovos" where the minimum pedigree gq is below this will not be considered.
+int32_t *dp,ndp=0;
+int32_t *dpf,ndpf=0;
+int32_t *ad,nad=0;
+int32_t *ft,nft=0;
+
+
+
 int count[3];
 pedigree ped;
 int *pmap;
@@ -130,16 +140,14 @@ int map_pedigree() {
   return(count);
 }
 
-int mendel_main(bcf1_t *rec, bcf_hdr_t *hdr) {
-  int i;
-  int32_t nmendel=0;
-  int32_t ndenovo=0;
-  int k0,k1,m0,m1,d0,d1;//haploid gneotypes
-  int k,m,d;//diploid genotypes
+
+int mendel_main(bcf1_t *rec, bcf_hdr_t *hdr) 
+{
+    int i,j;
+    int k0,k1,m0,m1,d0,d1;//haploid gneotypes
+    int k,m,d;//diploid genotypes
 
   for(i=0;i<ped.n;i++) {
-    int is_mendel_inconsistent=1;
-    int is_denovo=0;
     if(pmap[i]==-1 || ped.dadidx[i]==-1 || ped.mumidx[i]==-1 )
       continue;
 
@@ -147,116 +155,90 @@ int mendel_main(bcf1_t *rec, bcf_hdr_t *hdr) {
     d0=gt[pmap[ped.dadidx[i]]*2]; d1=gt[pmap[ped.dadidx[i]]*2+1];
     m0=gt[pmap[ped.mumidx[i]]*2]; m1=gt[pmap[ped.mumidx[i]]*2+1];
 
-    if(k0>bcf_gt_missing&&k1>bcf_gt_missing&&d0>bcf_gt_missing&&d1>bcf_gt_missing&&m0>bcf_gt_missing&&m1>bcf_gt_missing) {
-      k=bcf_gt_allele(k0)+bcf_gt_allele(k1);
-      m=bcf_gt_allele(m0)+bcf_gt_allele(m1);
-      d=bcf_gt_allele(d0)+bcf_gt_allele(d1);
+    k=0;
+    m=0;
+    d=0;
+    /* fprintf(stdout,"%d/%d\n",bcf_gt_allele(k0),bcf_gt_allele(k1)); */
+    /* fprintf(stdout,"%d %d %d\n",bcf_gt_is_missing(k0),bcf_gt_is_missing(k1),!bcf_gt_is_missing(k0)&&!bcf_gt_is_missing(k1)); */
+    /* fprintf(stdout,"%d %d %d\n",k,d,m); */
+    if(!bcf_gt_is_missing(k0)&&!bcf_gt_is_missing(k1))
+	k=bcf_gt_allele(k0)+bcf_gt_allele(k1);
+    if(!bcf_gt_is_missing(m0)&&!bcf_gt_is_missing(m1))
+	m=bcf_gt_allele(m0)+bcf_gt_allele(m1);
+    if(!bcf_gt_is_missing(d0)&&!bcf_gt_is_missing(d1))
+	d=bcf_gt_allele(d0)+bcf_gt_allele(d1);
+    //fprintf(stdout,"%d %d %d\n",k,d,m);
+    assert(k>=0&&k<3);
+    assert(d>=0&&d<3);
+    assert(m>=0&&m<3);
+    //check mendel consistency.
 
-      assert(k>=0&&k<3);
-      assert(d>=0&&d<3);
-      assert(m>=0&&m<3);
-      //check mendel consistency.
-      if(m==0&&d==0)
-      {
-	if(k==0) is_mendel_inconsistent=0;
-	else ndenovo=1;
-      }
-      if((m==0&&d==1)||(m==1&&d==0))
-	if(k!=2) is_mendel_inconsistent=0;
-      if((m==0&&d==2)||(m==2&&d==0))
-	if(k==1) is_mendel_inconsistent=0;
-      if(m==1&&d==1)
-	is_mendel_inconsistent=0;
-      if((m==1&&d==2)||(m==2&&d==1))
-	if(k!=0) is_mendel_inconsistent=0;      
-      if(m==2&&d==2)
-	if(k==2) is_mendel_inconsistent=0;
-      nmendel+=is_mendel_inconsistent;
-      ndenovo+=is_denovo;
-      //      if(is_mendel_inconsistent) fprintf (stderr,"%d\t%d x %d -> %d\tERROR\n",rec->pos+1,m,d,k);
-      //      else fprintf (stderr,"%d\t%d x %d -> %d\n",rec->pos+1,m,d,k);
-      //phase.
-      if(!is_mendel_inconsistent) {
-	if(!(k==1&&m==1&&d==1) && (k==1||m==1||d==1)) {// can/should we phase this site?
-	  int du=-10,dt=-10,mu=-10,mt=-10,kd=-10,km=-10;
-	  //phase rules
-	  if(m!=1) {
-	    mt=m/2;
-	    mu=m/2;
-	    km=mt;
-	    kd=k-km;
-	    dt=kd;
-	    du=d-dt;
-	  }
-	  if(d!=1) {
-	    dt=d/2;
-	    du=d/2;
-	    kd=dt;
-	    km=k-kd;
-	    mt=km;
-	    mu=m-mt;
-	  }
-	  if(k!=1) {
-	    kd=k/2;
-	    km=k/2;
-	    dt=kd;
-	    du=d-dt;
-	    mt=km;
-	    mu=m-mt;	    
-	  }
-	  assert(k==(kd+km));
-	  assert(m==(mu+mt));
-	  assert(d==(du+dt));
-	  gt[pmap[i]*2] = bcf_gt_phased(kd);
-	  gt[pmap[i]*2+1]= bcf_gt_phased(km);
-	  gt[pmap[ped.dadidx[i]]*2] = bcf_gt_phased(dt);
-	  gt[pmap[ped.dadidx[i]]*2+1] = bcf_gt_phased(du);
-	  gt[pmap[ped.mumidx[i]]*2]  = bcf_gt_phased(mt);
-	  gt[pmap[ped.mumidx[i]]*2+1] = bcf_gt_phased(mu);
+    if(m==0&&d==0&&k>0)
+    {
+	if(k!=0)
+	{ //denovo
+//GT:GQ:DP:DPF:AD:PF
+//	    fprintf(stdout,"%d %d %d\n",k,d,m);
+	    bcf_unpack(rec, BCF_UN_FMT);
+	    assert(bcf_get_format_int32(hdr,rec,"GQ",&gq,&ngq)>0);
+	    if(gq[pmap[i]]>=mingq && gq[pmap[ped.dadidx[i]]]>=mingq &&  gq[pmap[ped.mumidx[i]]]>=mingq)
+	    {
+		assert(bcf_get_format_int32(hdr,rec,"DP",&dp,&ndp)>0);
+		assert(bcf_get_format_int32(hdr,rec,"DPF",&dpf,&ndpf)>0);
+		assert(bcf_get_format_int32(hdr,rec,"AD",&ad,&nad)>0);
+		assert(bcf_get_format_int32(hdr,rec,"PF",&ft,&nft)>0);
+		fprintf(stdout,"%s\t%d\t%s\t%s\t%s\t%s\t%s",bcf_hdr_id2name(hdr,rec->rid),rec->pos+1,rec->d.allele[0],rec->d.allele[1],hdr->samples[pmap[i]],hdr->samples[pmap[ped.dadidx[i]]],hdr->samples[pmap[ped.mumidx[i]]]);
+		int pedlook[3];
+		pedlook[0] = pmap[i];
+		pedlook[1] = pmap[ped.dadidx[i]];
+		pedlook[2] = pmap[ped.mumidx[i]];
+		kstring_t str = {0,0,0};
+		for(j=0;j<3;j++)
+		{
+		    int idx = pedlook[j];
+//		fprintf(stderr,"idx=%d\n",idx);
+		    kputc('\t',&str);
+		    if(!bcf_gt_is_missing(gt[idx*2]))	 kputw(bcf_gt_allele(gt[idx*2]),&str);else kputc('.',&str);
+		    kputc('/',&str);
+		    if(!bcf_gt_is_missing(gt[idx*2+1]))	 kputw(bcf_gt_allele(gt[idx*2+1]),&str);else kputc('.',&str);
+		    kputc(':',&str);
+		    if(gq[idx]>=0)	 kputw(gq[idx],&str);else kputc('.',&str);
+		    kputc(':',&str);
+		    if(dp[idx]>=0)	 kputw(dp[idx],&str);else kputc('.',&str);
+		    kputc(':',&str);
+		    if(dpf[idx]>=0)	 kputw(dpf[idx],&str);else kputc('.',&str);
+		    kputc(':',&str);
+		    if(ad[2*idx]>=0)	 kputw(ad[2*idx],&str);else kputc('.',&str);
+		    kputc(',',&str);
+		    if(ad[2*idx+1]>=0)	 kputw(ad[2*idx+1],&str);else kputc('.',&str);
+		    kputc(':',&str);
+		    if(ft[idx]>=0)	 kputw(ft[idx],&str);else kputc('.',&str);
+		}
+		fprintf(stdout,"%s",str.s);
+		free(str.s);
+		fprintf(stdout,"\n");
+	    }
 	}
-	if(k==2&&m==2&&d==2) {
-	  gt[pmap[i]*2] = bcf_gt_phased(1);
-	  gt[pmap[i]*2+1]= bcf_gt_phased(1);
-	  gt[pmap[ped.dadidx[i]]*2] = bcf_gt_phased(1);
-	  gt[pmap[ped.dadidx[i]]*2+1] = bcf_gt_phased(1);
-	  gt[pmap[ped.mumidx[i]]*2]  = bcf_gt_phased(1);
-	  gt[pmap[ped.mumidx[i]]*2+1] = bcf_gt_phased(1);	  
-	}
-	if(k==0&&m==0&&d==0) {
-	  gt[pmap[i]*2] = bcf_gt_phased(0);
-	  gt[pmap[i]*2+1]= bcf_gt_phased(0);
-	  gt[pmap[ped.dadidx[i]]*2] = bcf_gt_phased(0);
-	  gt[pmap[ped.dadidx[i]]*2+1] = bcf_gt_phased(0);
-	  gt[pmap[ped.mumidx[i]]*2]  = bcf_gt_phased(0);
-	  gt[pmap[ped.mumidx[i]]*2+1] = bcf_gt_phased(0);	  
-	}
-      }
     }
   }
-  bcf_update_genotypes(hdr,rec,(void *)gt,bcf_hdr_nsamples(hdr)*2);
-  //  fprintf(stderr,"NMENDEL=%d\n",nmendel);
-  bcf_update_info_int32(hdr, rec, "NMENDEL", &nmendel, 1);
-  bcf_update_info_int32(hdr, rec, "NDENOVO", &ndenovo, 1);
   return(0);
 }
 
 
-const char *about(void)
-{
-    return "Rudimentary trio analysis. Counts mendel inconsistencies and phase (where possible). Bi-allelic sites only.\n";
-}
 
 char *usage(void)
 {
-  return "mendel phases, flags mendel inconsistencies and nominal denovos\n";
+  return "prints out nominal denovo mutations\n";
+}
+
+char *about(void)
+{
+  return "prints out nominal denovo mutations\n";
 }
 
 int init(int argc, char **argv, bcf_hdr_t *in, bcf_hdr_t *out)
 {
   in_hdr  = in;
-  out_hdr = out;
-  bcf_hdr_append(out_hdr, "##INFO=<ID=NMENDEL,Number=1,Type=Integer,Description=\"number of mendel inconsistences observed at this site\">");
-  bcf_hdr_append(out_hdr, "##INFO=<ID=NDENOVO,Number=1,Type=Integer,Description=\"number of nominal denovo mutations at this site\">");
 
   int c;
   char *fname = NULL;
@@ -264,13 +246,15 @@ int init(int argc, char **argv, bcf_hdr_t *in, bcf_hdr_t *out)
   static struct option loptions[] =
     {
       {"pedigree",1,0,'p'},
+      {"min-gq",1,0,'g'},
       {0,0,0,0}
     };
 
-  while ((c = getopt_long(argc, argv, "p:?h",loptions,NULL)) >= 0)    {
+  while ((c = getopt_long(argc, argv, "g:p:?h",loptions,NULL)) >= 0)    {
     switch (c) 
       {
       case 'p': fname = optarg; break;
+      case 'g': mingq = atoi(optarg); break;
       case 'h':
       case '?':
       default: fprintf(stderr,"%s", usage()); exit(1); break;
@@ -280,10 +264,10 @@ int init(int argc, char **argv, bcf_hdr_t *in, bcf_hdr_t *out)
     fprintf(stderr,"Missing the -p option.\n");
     return -1;
   }
-  fprintf(stderr,"n=%d\n", bcf_hdr_nsamples(out_hdr));
+  fprintf(stderr,"n=%d\n", bcf_hdr_nsamples(in_hdr));
   read_pedigree(fname,&ped);
   map_pedigree();
-  return 0;
+  return 1;
 }
 
 bcf1_t *process(bcf1_t *rec)
@@ -291,11 +275,12 @@ bcf1_t *process(bcf1_t *rec)
   int ret;
   if(rec->n_allele==2) {
     ret = bcf_get_genotypes(in_hdr, rec, &gt, &ngt);
+
     assert(ret>0);
-    ret = mendel_main(rec,out_hdr);
+    ret = mendel_main(rec,in_hdr);
   }
   
-  return rec;
+  return(NULL);
 }
 
 void destroy(void)

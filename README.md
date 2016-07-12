@@ -1,4 +1,4 @@
-agg: a utility for aggregating gvcfs. This software is not commercially supported.
+agg: a utility for aggregating Illumina-style GVCFs. This software is not commercially supported.
 
 Copyright (c) 2016, Illumina, Inc. All rights reserved. 
 
@@ -15,7 +15,13 @@ For example, if you had 3000 gvcfs, your pipeline might be:
 
 The advantage of this approach is that when another 500 samples come along, you only have to build one new chunk (step 1) and then re-genotype from the 6+1=7 chunks to create a 3500 sample bcf (step 2). This is faster than merging from all gvcfs every time some new samples arrive.
 
-**Note:** if you are working with relatively few gvcfs, then [gvcftools](https://github.com/sequencing/gvcftools) merge_variants is more appropriate.  The agg pipeline is more complex to run and is geared towards 1000s of gvcfs.
+**Note:** 
+
+If you are working with relatively few gvcfs, then [gvcftools](https://github.com/sequencing/gvcftools) merge_variants is more appropriate.  The agg pipeline is more complex to run and is geared towards 1000s of gvcfs.
+
+This tool is designed for WGS data. It is not currently appropriate for exome data.
+
+There are various flavours of GVCF in the wild, this tool only works with the format [produced by Illumina pipelines](https://sites.google.com/site/gvcftools/home/about-gvcf).
 
 ###Installation
 The only compilation dependency is [htslib](http://www.htslib.org/) which is included with the software.  

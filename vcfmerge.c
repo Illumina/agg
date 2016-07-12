@@ -4,8 +4,6 @@
 
     Author: Petr Danecek <pd3@sanger.ac.uk>
 
-    Modifications for use with agg tool by Jared O'Connell <joconnell@illumina.com>
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -437,7 +435,7 @@ void merge_headers(bcf_hdr_t *hw, const bcf_hdr_t *hr, const char *clash_prefix,
         {
             // there is a sample with the same name
 	  //            if ( !force_samples ) error("Error: Duplicate sample names (%s), use --force-samples to proceed anyway.\n", name);
-            if ( !force_samples ) error("Error: Duplicate sample names (%s)..\nUse --allow-duplicates if you want to proceed anyway.", name);
+            if ( !force_samples ) error("Error: Duplicate sample names (%s)..\n", name);
 
             int len = strlen(hr->samples[i]) + strlen(clash_prefix) + 1;
             name = (char*) malloc(sizeof(char)*(len+1));
@@ -2068,15 +2066,13 @@ int main_vcfmerge(int argc, char *argv[])
     return 0;
 }
 
-//this is a wrapper for bcftools merge.
-//agg wants a merged variant file with a very specific set of parameters.
-int dummy_main_vcfmerge(int argc,char **argv,char *file_list, char *output_fname,int n_threads,int force_samples)
+
+int dummy_main_vcfmerge(int argc, char *argv[],char *file_list, char *output_fname,int n_threads)
 {
     int c;
     args_t *args = (args_t*) calloc(1,sizeof(args_t));
     args->files  = bcf_sr_init();
-    //   args->argc   = argc; args->argv = argv;
-    args->argc=argc;args->argv=argv;
+    args->argc   = argc; args->argv = argv;
     args->output_fname = output_fname;
     args->output_type = FT_BCF_GZ;
     args->collapse = COLLAPSE_NONE;
@@ -2085,10 +2081,14 @@ int dummy_main_vcfmerge(int argc,char **argv,char *file_list, char *output_fname
     args->file_list=file_list;
     args->info_rules="-";
     args->files->require_index = 1;
-    args->force_samples=force_samples;
     if ( args->regions_list && bcf_sr_set_regions(args->files, args->regions_list, regions_is_file)<0 )
         error("Failed to read the regions: %s\n", args->regions_list);
 
+    while (optind<argc)
+    {
+        if ( !bcf_sr_add_reader(args->files, argv[optind]) ) error("Failed to open %s: %s\n", argv[optind],bcf_sr_strerror(args->files->errnum));
+        optind++;
+    }
     if ( args->file_list )
     {
         int nfiles, i;
