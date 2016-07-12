@@ -1,0 +1,14 @@
+{
+"App Name": "Agg part 1",
+"Version": "1.0.4",
+"Command": "/agg/bsAppScript1.sh <Choose AppResults containing genome VCFs:AppResults>",
+
+"Files": [ ],
+
+"Packages (reachable using ubuntu's apt-get install)": [ "samtools", "curl", "make", "python" ],
+
+"Extra commands to run during docker image creation": [ ],
+
+"Docker base image": "agg-part-1-local",
+"Docker repository": "docker.illumina.com/bsuser2/agg-part-1"
+}

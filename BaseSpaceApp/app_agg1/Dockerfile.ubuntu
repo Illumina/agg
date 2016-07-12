@@ -1,0 +1,5 @@
+FROM ubuntu
+MAINTAINER ljanin@illumina.com
+RUN apt-get update && apt-get install -y --forece-yes python
+ADD FilesForDockerImage.tgz /
+
