@@ -1,5 +1,5 @@
 #!/bin/bash -x
-# Script v3 goes through all AppResults in a designated project to locate genome vcf files
+# Script v4 goes through all genome.vcf.gz mounted by BSFS
 
 echo "Starting BaseSpace App: $*"
 echo "Project1=$Project1"
@@ -41,14 +41,12 @@ cat chunk1
 
 # Run agg
 mkdir chunks
-time python ${AGG_PATH}/make_chunk.py chunk1 -o ${OUTDIR}/aggChunk -ref /genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa -tmp `pwd` -nproc 32 | tee ${OUTDIR}/mylog
+time python ${AGG_PATH}/make_chunk.py chunk1 -o ${OUTDIR}/aggChunk -ref /genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa -tmp `pwd` | tee ${OUTDIR}/make_chunk.log
 
 
 # Temporary, for debugging
 cd /data/scratch
 mkdir ${OUTDIR}/scratch
-ls -laR > ${OUTDIR}/scratch/find.txt
-ls -laR /data > ${OUTDIR}/scratch/find2.txt
-find /data/input >  ${OUTDIR}/scratch/find3.txt
+ls -laR /data > ${OUTDIR}/scratch/filesystem_data_snapshot1.txt
 #mv * ${OUTDIR}/scratch/
 
