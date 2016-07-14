@@ -5,14 +5,13 @@ echo "Starting BaseSpace App: $*"
 echo "Project1=$Project1"
 echo "OUTDIR=$OUTDIR"
 
-export PATH=$PATH:/agg
+export AGG_PATH=/agg/
+export PATH=$PATH:${AGG_PATH}
 
 env
 df -h
 #find /genomes | grep hg19
 find /data/input
-
-ServerUri=`cat /data/input/AppSession.json | jq --raw-output '.OriginatingUri' | sed 's/^https:\/\///'`
 
 cd /data/scratch
 
@@ -42,7 +41,7 @@ cat chunk1
 
 # Run agg
 mkdir chunks
-time python ~/agg/make_chunk.py chunk1 -o ${OUTDIR}/aggChunk -ref /genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa -tmp `pwd` --allow-duplicates -nproc 32 | tee ${OUTDIR}/mylog
+time python ${AGG_PATH}/make_chunk.py chunk1 -o ${OUTDIR}/aggChunk -ref /genomes/Homo_sapiens/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa -tmp `pwd` -nproc 32 | tee ${OUTDIR}/mylog
 
 
 # Temporary, for debugging
