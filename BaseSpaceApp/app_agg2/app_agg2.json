@@ -1,0 +1,15 @@
+{
+"App Name": "Agg, part 2",
+"Version": "1.0.4",
+"Command": "/agg2/bsAppScript2.sh <AggChunk appresults to merge:AppResults=5957953>",
+
+"Files": [ ],
+
+"Package manager": "yum",
+"Packages (installed via package manager)": [ "samtools", "curl", "make", "python" ],
+
+"Extra commands to run during docker image creation": [ ],
+
+"Docker base image": "agg-part-2-local",
+"Docker repository": "docker.illumina.com/bsuser2/agg-part-2"
+}

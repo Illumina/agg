@@ -43,10 +43,3 @@ export PATH=$PATH:<bs app creation tools location>
 bs-create-native-app app_agg2.json
 
 
-
-Notes:
-- The app is called "AutomaticallyGeneratedApp". I leave this as it is until we are happy to make it public.
-- The app is created for basespaceuser2 account on Hoth server
-
-
-
