@@ -1,7 +1,7 @@
 {
 "App Name": "Agg, part 2",
 "Version": "1.0.4",
-"Command": "/agg2/bsAppScript2.sh <AggChunk appresults to merge:AppResults=5957953>",
+"Command": "/agg2/bsAppScript2.sh <AggChunk appresults to merge:AppResults=5957953> <Chromosomes (comma-separated):String=21,22>",
 
 "Files": [ ],
 

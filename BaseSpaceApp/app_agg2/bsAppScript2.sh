@@ -3,9 +3,15 @@
 #	 //texlive-latex-base
 echo "Starting BaseSpace App: $*"
 
+echo "String1=$String1"
+
 InputAppResultDir=$1
 echo "InputAppResultDir=${InputAppResultDir}"
 echo "OUTDIR=$OUTDIR"
+chroms=$2
+echo "chroms=$chroms"
+spaceSeparatedChroms=`echo "$chroms" | tr "," " "`
+echo "spaceSeparatedChroms=$spaceSeparatedChroms"
 
 env
 
@@ -33,9 +39,10 @@ S3_DATA=/data/scratch/s3
 CHUNKS=`find /data/input/appresults -name aggChunk.bcf -print`
 echo CHUNKS=${CHUNKS}
 
-for i in 21 22 `seq 1 20` X Y ; do
-  time agg genotype -r chr${i} ${CHUNKS} -Ob -o merged.chr${i}.bcf  # 1min
+for i in $spaceSeparatedChroms ; do
+  time agg genotype -r chr${i} ${CHUNKS} -Ob -o merged.chr${i}.bcf & # 1min
 done
+wait
 
 
 # Download db files
@@ -45,18 +52,21 @@ for i in \
   ALL.cgi_multi_sample.20130725.snps_indels.high_coverage_cgi.normalized.uniq.genotypes.gtonly.cr90.ic10.bcf \
   ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.vcf.gz \
   ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.vcf.gz.tbi \
-    ; do time curl https://s3.amazonaws.com/illumina-ukch-compbio/1000GenomesReference/20130502/$i -o ${S3_DATA}/$i & done
+    ; do time curlWithRetry https://s3.amazonaws.com/illumina-ukch-compbio/1000GenomesReference/20130502/$i -o ${S3_DATA}/$i & done
 wait
 
 
-for i in 21 22 `seq 1 20` X Y ; do
+for i in $spaceSeparatedChroms ; do
+ (
   input=merged.chr${i}.bcf 
   bcftools index ${input}
 
   # basic summary of number of sites, intersection with 1000G, etc.
   time bcftools stats $input ${S3_DATA}/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.vcf.gz > stats_chr${i}.txt # 4.5min
   plot-vcfstats stats_chr${i}.txt -p stats_chr${i}_dir/ # fails quickly
+ ) &
 done
+wait
 
 #Rudy's tool for PCA
 #NO_OR_WITH=no
