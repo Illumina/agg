@@ -40,6 +40,8 @@ int *gt = NULL, ngt = 0;
 int count[3];
 pedigree ped;
 int *pmap;
+int duo_counts[9];
+int trio_counts[27];
 
 int read_pedigree(char *fname,pedigree *p) {
   int maxl = 10000;
@@ -137,6 +139,8 @@ int mendel_main(bcf1_t *rec, bcf_hdr_t *hdr) {
   int k0,k1,m0,m1,d0,d1;//haploid gneotypes
   int k,m,d;//diploid genotypes
 
+  for(i=0;i<27;i++)   trio_counts[i]=0;
+
   for(i=0;i<ped.n;i++) {
     int is_mendel_inconsistent=1;
     int is_denovo=0;
@@ -147,11 +151,12 @@ int mendel_main(bcf1_t *rec, bcf_hdr_t *hdr) {
     d0=gt[pmap[ped.dadidx[i]]*2]; d1=gt[pmap[ped.dadidx[i]]*2+1];
     m0=gt[pmap[ped.mumidx[i]]*2]; m1=gt[pmap[ped.mumidx[i]]*2+1];
 
+
     if(k0>bcf_gt_missing&&k1>bcf_gt_missing&&d0>bcf_gt_missing&&d1>bcf_gt_missing&&m0>bcf_gt_missing&&m1>bcf_gt_missing) {
       k=bcf_gt_allele(k0)+bcf_gt_allele(k1);
       m=bcf_gt_allele(m0)+bcf_gt_allele(m1);
       d=bcf_gt_allele(d0)+bcf_gt_allele(d1);
-
+      trio_counts[d*9+m*3+k]++;
       assert(k>=0&&k<3);
       assert(d>=0&&d<3);
       assert(m>=0&&m<3);
@@ -237,6 +242,7 @@ int mendel_main(bcf1_t *rec, bcf_hdr_t *hdr) {
   //  fprintf(stderr,"NMENDEL=%d\n",nmendel);
   bcf_update_info_int32(hdr, rec, "NMENDEL", &nmendel, 1);
   bcf_update_info_int32(hdr, rec, "NDENOVO", &ndenovo, 1);
+  bcf_update_info_int32(hdr, rec, "TRIO", trio_counts,27);
   return(0);
 }
 
@@ -257,6 +263,9 @@ int init(int argc, char **argv, bcf_hdr_t *in, bcf_hdr_t *out)
   out_hdr = out;
   bcf_hdr_append(out_hdr, "##INFO=<ID=NMENDEL,Number=1,Type=Integer,Description=\"number of mendel inconsistences observed at this site\">");
   bcf_hdr_append(out_hdr, "##INFO=<ID=NDENOVO,Number=1,Type=Integer,Description=\"number of nominal denovo mutations at this site\">");
+  bcf_hdr_append(out_hdr, "##INFO=<ID=DUO,Number=9,Type=Integer,Description=\"parent-child duo genotype counts\">");
+  bcf_hdr_append(out_hdr, "##INFO=<ID=TRIO,Number=27,Type=Integer,Description=\"mother-father-child trio genotype counts\">");
+
 
   int c;
   char *fname = NULL;
