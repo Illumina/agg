@@ -42,6 +42,7 @@
 #define SET_HWE (1<<3)
 #define SET_INBREEDING (1<<3)
 
+
 typedef struct
 {
     char *name;
@@ -286,6 +287,7 @@ int init(int argc, char **argv, bcf_hdr_t *in, bcf_hdr_t *out)
 */
 float calc_inbreeding(int nref, int nalt, int nhet)
 {
+  //  fprintf(stderr,"nref=%d nalt=%d nhet=%d\n",nref,nalt,nhet);
   int ngt   = (nref+nalt) / 2;
   if(nref==0||nalt==0)    {//monomorphic. do nothing.
     return(0.);
@@ -448,7 +450,7 @@ bcf1_t *process(bcf1_t *rec)
         }
         if ( args.tags & SET_INBREEDING )
         {
-            float inbreeding = (args.ac[0]>0 && ac>0) ? calc_inbreeding(args.ac[0], ac, nhet) : -1;
+	  float inbreeding = (args.ac[0]>0 && ac>0) ? calc_inbreeding(args.ac[0], ac, nhet) : 0;
             args.str.l = 0;
             ksprintf(&args.str, "INBREEDING_%s", pop->name);
             if ( bcf_update_info_float(args.out_hdr,rec,args.str.s,&inbreeding,1)!=0 )
@@ -476,7 +478,7 @@ bcf1_t *process(bcf1_t *rec)
     {
         int32_t tot_ac = 0;
         for (i=1; i<rec->n_allele; i++) tot_ac += args.tot_ac[i];
-        float inbreeding = (args.tot_ac[0]>0 && tot_ac>0) ? calc_inbreeding(args.tot_ac[0], tot_ac, tot_nhet) : -1;
+        float inbreeding = (args.tot_ac[0]>0 && tot_ac>0) ? calc_inbreeding(args.tot_ac[0], tot_ac, tot_nhet) : 0;
         if ( bcf_update_info_float(args.out_hdr,rec,"INBREEDING",&inbreeding,1)!=0 )
             error("Error occurred while updating INBREEDING at %s:%d\n", args.str.s,bcf_seqname(args.in_hdr,rec),rec->pos+1);
     }
