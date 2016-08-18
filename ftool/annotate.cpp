@@ -17,6 +17,16 @@ extern "C" {
 
 using namespace std;
 
+inline float binomial_sd(int32_t a,int32_t b){
+  if((a+b)>0 && a!=bcf_int32_missing && b!=bcf_int32_missing){
+    float n = a+b;
+    return(((float)b/n - 0.5) / sqrt(.25/n));
+  }
+  else{
+    return(0.);
+  }
+}
+
 //calculates the median and the mad
 //note this modifies x
 int madian(vector<float> & x,float & median,float & mad) {
@@ -28,7 +38,7 @@ int madian(vector<float> & x,float & median,float & mad) {
     median = x[x.size()/2];
   else 
     median = ( (float)x[x.size()/2] + (float)x[x.size()/2+1] ) / 2;
-  for(int i=0;i<x.size();i++)
+  for(size_t i=0;i<x.size();i++)
     x[i] = fabs((float)(x[i]-median));
   sort(x.begin(),x.end()); 
   if(x.size()%2==1) 
@@ -90,7 +100,7 @@ public:
     _median.resize(_nbin);
     _mad.resize(_nbin);
     for(int b=0;b<_nbin;b++) {
-      for(int i=0;i<x.size();i++) 
+      for(size_t i=0;i<x.size();i++) 
 	if(x[i]>=_bins[b] && x[i]<_bins[b+1])
 	  x1.push_back(y[i]);
       madian(x1,_median[b],_mad[b]);
@@ -133,7 +143,7 @@ private:
   bcf_hdr_t *_hdr;
   string _vcf;
   filter_t *_filter;
-  BinResidualiser _res;
+  BinResidualiser _dp_residuals,_ab_residuals;
   double _alpha,_beta,_p_dpf;
   int _nsample;
 };
@@ -156,14 +166,16 @@ Standardiser::Standardiser(const string & vcf1,const string & include) {
 
 //first pass 
 //1. read in (filtered) depth and AF
-//2. regress DP ~ AF + ALT_COUNT^2
-//3. find mean/sd of residuals.
+//2. regress DP ~ AF (simple median per bin scheme)
+//3. annodatate mean/sd of residuals.
 int Standardiser::estimateParameters() {
   bcf1_t *line;
   int32_t info_dp,ac,an,dpf,dpa;
+  int32_t *info_ab = (int32_t *)malloc(2*sizeof(int32_t));
   int nval=1;
   vector<float> depth;
   vector<float> alt_count;
+  vector<float> ab;
 
   // binomial_data dpa_dpf;
   // dpa_dpf.n=0;
@@ -189,11 +201,14 @@ int Standardiser::estimateParameters() {
       assert(      bcf_get_info_int32(_hdr,line,"DPF",&ptr,&nval) == 1);
       ptr=&dpa;
       assert(      bcf_get_info_int32(_hdr,line,"DPA",&ptr,&nval) == 1);
+      int n_ab=2;
 
+      assert(      bcf_get_info_int32(_hdr,line,"AB",&info_ab,&n_ab) == 2);
       //if an==0 then it is not a valid site.
       if(an>0) {
 	alt_count.push_back( (float)ac );
 	depth.push_back((float)info_dp);
+	ab.push_back(binomial_sd(info_ab[0],info_ab[1]));
 	// dpa_dpf.k.push_back(dpa);
 	// dpa_dpf.size.push_back(dpf+dpa);
 	// dpa_dpf.n++;
@@ -208,9 +223,13 @@ int Standardiser::estimateParameters() {
   cerr <<"_p_dpf="<<_p_dpf<<endl;
   //  fit_betab(&dpa_dpf,_alpha,_beta);
   bcf_sr_destroy(_sr);	
-  _res.initialise(20,maxn);
-  _res.fit(alt_count,depth);
-
+  cerr<<"dp quantiles:"<<endl;
+  _dp_residuals.initialise(20,maxn);
+  _dp_residuals.fit(alt_count,depth);
+  cerr<<"ab quantiles:"<<endl;
+  _ab_residuals.initialise(20,maxn);
+  _ab_residuals.fit(alt_count,ab);
+  free(info_ab);
   return(0);
 }
 
@@ -219,13 +238,16 @@ int Standardiser::estimateParameters() {
 int Standardiser::standardise() { 
   bcf1_t *line;
   int32_t info_dp,ac,an,dpf,dpa;
+  int32_t *info_ab = (int32_t *)malloc(2*sizeof(int32_t));
   int nval=1;
   _sr =  bcf_sr_init() ;  
   if(!bcf_sr_add_reader (_sr, _vcf.c_str()))    
     die("Problem opening vcf1");
   _hdr=_sr->readers[0].header;
+  bcf_hdr_append(_hdr, "##INFO=<ID=S_AB,Number=1,Type=Float,Description=\"normalised alleleic balance measure (mean 0 sd 1)\">");
   bcf_hdr_append(_hdr, "##INFO=<ID=S_DP,Number=1,Type=Float,Description=\"normalised depth (mean 0 and sd 1)\">");
-  bcf_hdr_append(_hdr, "##INFO=<ID=S_DPF,Number=1,Type=Float,Description=\"-log10(p-value) that DPA/(DPA+DPF) is extremely low. Assumes beta-binomial distribution \">");
+  //  bcf_hdr_append(_hdr, "##INFO=<ID=S_DPF,Number=1,Type=Float,Description=\"-log10(p-value) that DPA/(DPA+DPF) is extremely low. Assumes beta-binomial distribution \">");
+  bcf_hdr_append(_hdr, "##INFO=<ID=S_DPF,Number=1,Type=Float,Description=\"proportion of bases filtered in samples with ALT genotypes\">");
 
   htsFile *out_fh  = hts_open("-", "wv");
   bcf_hdr_write(out_fh, _hdr);
@@ -242,20 +264,27 @@ int Standardiser::standardise() {
     assert(      bcf_get_info_int32(_hdr,line,"DPF",&ptr,&nval) == 1);
     ptr=&dpa;
     assert(      bcf_get_info_int32(_hdr,line,"DPA",&ptr,&nval) == 1);
+    int nab=2;
+    assert(      bcf_get_info_int32(_hdr,line,"AB",&info_ab,&nab) == 2);
+    //    cerr << line->pos+1<<" "<<info_ab[0]<<","<<info_ab[1]<<"="<<binomial_sd(info_ab[0],info_ab[1])<<endl;
 
     float s_dpf = 0;
     if(dpa>0&&dpf>0)      {
       //s_dpf = -log10(pbetab(dpa,dpa+dpf,_alpha,_beta,false,1000));
       s_dpf = (float)dpf/(float)(dpa+dpf);      
-      s_dpf = ( s_dpf - _p_dpf ) / sqrt ( _p_dpf*(1-_p_dpf)/(float)(dpa+dpf) );
+      //      s_dpf = ( s_dpf - _p_dpf ) / sqrt ( _p_dpf*(1-_p_dpf)/(float)(dpa+dpf) );
     }
 
-    //    cerr << line->pos+1<<" "<<dpa<<"/"<<dpf<<" = "<<p_dpf<<endl;
+    //cerr << line->pos+1<<" "<<dpa<<"/"<<dpf<<" = "<<p_dpf<<endl;
+
     float x = (float)ac;
     if(an==0) x=0.;
-    float ndp = _res.residual(x,(float)info_dp);
+    float ndp = _dp_residuals.residual(x,(float)info_dp);
+    float s_ab = _ab_residuals.residual(x,(float)binomial_sd(info_ab[0],info_ab[1]));
+    //    cerr << line->pos+1<<" "<<info_ab[0]<<","<<info_ab[1]<<" = "<<s_ab<<endl;
     //    float call = (float)an/(2. * (float)_nsample);
     bcf_update_info_float(_hdr, line, "S_DP", &ndp, 1);
+    bcf_update_info_float(_hdr, line, "S_AB", &s_ab, 1);
     //    bcf_update_info_float(_hdr, line, "CALL", &call, 1);
     bcf_update_info_float(_hdr, line, "S_DPF", &s_dpf, 1);
     //    bcf_update_info_float(_hdr, line, "CALLRATE", &callrate, 1);
@@ -264,6 +293,7 @@ int Standardiser::standardise() {
   }
   hts_close(out_fh);
   bcf_sr_destroy(_sr);	  
+  free(info_ab);
   return(0);
 }
 
