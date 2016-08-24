@@ -51,6 +51,7 @@ int init(int argc, char **argv, bcf_hdr_t *in, bcf_hdr_t *out)
   f_dpf = (int *)malloc(n*sizeof(int));
   f_ad = (int *)malloc(2*n*sizeof(int));
   bcf_hdr_append(out_hdr, "##INFO=<ID=PF,Number=A,Type=Float,Description=\"proportion of genotypes containing an ALT that passed the original single sample gvcf filter\">");
+  bcf_hdr_append(out_hdr, "##INFO=<ID=NPASS,Number=A,Type=Integer,Description=\"number of ALTs that passed the original single sample gvcf filter\">");
   bcf_hdr_append(out_hdr, "##INFO=<ID=AD,Number=R,Type=Integer,Description=\"sum of allele depths for respective alleles (all samples)\">"); 
   bcf_hdr_append(out_hdr, "##INFO=<ID=AB,Number=R,Type=Integer,Description=\"sum of allele depths for respective alleles (ALT samples)\">"); 
   bcf_hdr_append(out_hdr, "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"sum of depth  across all samples\">");
@@ -75,13 +76,13 @@ bcf1_t *process(bcf1_t *rec)
   assert(bcf_get_format_int32(in_hdr, rec, "AD", &f_ad, &nad)>0);
 
   bcf_get_genotypes(in_hdr, rec, &gt, &ngt);
-
+  int i_npass=0;
   float i_pf=0.;
   float nalt=0;
   sum_dp=sum_dpf=sum_dpa=0;sum_ad[0]=0;sum_ad[1]=0;sum_ab[0]=0;sum_ab[1]=0;
   for(i=0;i<n;i++) {
     if(bcf_gt_allele(gt[2*i])>0 || bcf_gt_allele(gt[2*i+1])>0 ) {
-      if(f_pf[i]) i_pf++;
+      if(f_pf[i]) i_npass++;
       nalt++;
     }        
 
@@ -117,9 +118,8 @@ bcf1_t *process(bcf1_t *rec)
   }
 
   //pf
-  if(i_pf>0.0 && nalt>0) i_pf/=nalt;
-  else i_pf=0.;
-
+  if(i_npass>0.0 && nalt>0) i_pf=(float)i_npass/nalt;
+  bcf_update_info_int32(out_hdr, rec, "NPASS", &i_npass, 1);
   bcf_update_info_float(out_hdr, rec, "PF", &i_pf, 1);
   bcf_update_info_int32(out_hdr, rec, "AD", sum_ad, 2);
   bcf_update_info_int32(out_hdr, rec, "AB", sum_ab, 2);

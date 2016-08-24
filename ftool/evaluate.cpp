@@ -118,8 +118,10 @@ int FilterEvaluator::evaluate() {
       for(int k=0;k<3;k++) 
   	cout<<	gt[i]<<"_"<<gt[j]<<"_"<<gt[k]<<"\t";
   cout <<"transition\ttransversion" << endl;
-  printQuantiles(_values_snps,"snp");
-  printQuantiles(_values_indels,"indel");
+  if(_values_snps.size()>0)
+    printQuantiles(_values_snps,"snp");
+  if(_values_indels.size()>0)
+    printQuantiles(_values_indels,"indel");
   return(0);
 }
 

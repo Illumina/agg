@@ -37,16 +37,24 @@ int getQuantiles(char *vcf,char *tag,vector<float> & quantiles)
   while(bcf_sr_next_line (sr))     {
     
   }
-  
+  return(0);
 }
 
-int power(char *vcf1,char *vcf2,char *tag) {
+int power(char *vcf1,char *vcf2,char *tag,float min_val,float max_val,int nquantile) {
   bcf_srs_t *sr =  bcf_sr_init() ;  
   sr->require_index=1;
   if(!bcf_sr_add_reader (sr, vcf1))    die("Problem opening vcf1");
   if(!bcf_sr_add_reader (sr, vcf2))    die("Problem opening vcf2");
-  vector<int> qual;
-  for(int i=0;i<=7;i++) qual.push_back(i*5);
+  vector<float> qual;
+  qual.push_back(-10e6);
+  float v=min_val;
+  float w=(float)(max_val-min_val)/(float)nquantile;
+  for(int i=0;i<=nquantile;i++) {
+    v=min_val+i*w;
+    qual.push_back(v);
+    cerr << i<<":"<<v<<endl;
+  }
+  qual.push_back(10e6);
   map<float, qbin> bins;
 
   bcf1_t *line1,*line2;
@@ -55,36 +63,39 @@ int power(char *vcf1,char *vcf2,char *tag) {
   int naf=0;
   while(bcf_sr_next_line (sr)) { 
     if( bcf_sr_has_line(sr,1) ) {
+      int ret,nval=1;
+      float value;
 
       if( bcf_sr_has_line(sr,0) )  {
 	line1 = bcf_sr_get_line(sr,0) ;
 	assert(line1->n_allele==2);
+	value=line1->qual;
+	float *ptr=&value;
+	if(tag!=NULL)
+	  assert(bcf_get_info_float(sr->readers[0].header,line1,tag,&ptr,&nval)==1);
       }
-
-      //      int ret=bcf_get_info_float(sr->readers[0].header,line2,tag,&af,&naf)
+	
       line2 = bcf_sr_get_line(sr,1) ;
       assert(line2->n_allele==2);
-      int ret=bcf_get_info_float(sr->readers[1].header,line2,"EUR_AF",&af,&naf);
+      ret=bcf_get_info_float(sr->readers[1].header,line2,"AF",&af,&naf);
       //      cerr<<line2->pos<<" "<<ret<<" "<<af[0]<<endl;
-
-      assert(ret==1);
+      if(ret!=1) die("no AF tag");
       if(!bins.count(af[0])) 
 	bins[af[0]] =  qbin(qual.size());
       else {
 	bins[af[0]]._nvar++;    
       }
       if( bcf_sr_has_line(sr,0) ) {
-	for(int i=0;i<qual.size();i++)
-	  if(line1->qual>=qual[i])
+	for(size_t i=0;i<qual.size();i++)
+	  if(value<=qual[i])
 	    bins[af[0]]._counts[i]++;	    
       }
     }
   }
-
+  cout <<"AF\tVALUE\tVCF1\tVCF2"<<endl;
   for( map<float,qbin >::iterator it1=bins.begin();it1!=bins.end();it1++ )  {
-    for(int i=0;i<qual.size();i++) 
+    for(size_t i=0;i<qual.size();i++) 
       cout << it1->first <<"\t"<<qual[i]<<"\t"<<it1->second._counts[i]<<"\t"<<it1->second._nvar<<endl;
-
   }
 
   return(0);
@@ -125,6 +136,6 @@ int power1(int argc,char **argv) {
   optind++;
   if(!vcf1&&!vcf2)
     die("missing arg");
-  power(vcf1,vcf2,ann);
+  power(vcf1,vcf2,ann,-6,14,10);
   return(0);
 }

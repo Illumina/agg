@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
     cerr << "Usage:\tftool <command> [options]\n" << endl;
     cerr << "Commands:" << endl;
     cerr << "\nannotate        adds some INFO fields that are useful for filtering" << endl;
-    cerr << "evaluate        tabulates mendel rates/tstv across quantiles of an INFO field" << endl;
+    cerr << "eval        tabulates mendel rates/tstv across quantiles of an INFO field" << endl;
     cerr << "power           looks at proportion of \"true\" variants maintained under filtering routines" <<endl << endl;
     return(1);
   }
