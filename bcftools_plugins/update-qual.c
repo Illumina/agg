@@ -1,6 +1,6 @@
 /*  update-qual.c gives a crude re-estimate of QUAL by summing GQ across all alternate genotypes.
 
-    Copyright (C) 2015 Illumina
+    Copyright (C) 2016 Illumina
 
     Author: Jared O'Connell <joconnell@illumina.com>
 
