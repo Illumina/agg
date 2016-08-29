@@ -9,7 +9,14 @@ int *zeros(int n) {
 
 bool fileexists(const string& fname){
     ifstream ifile(fname.c_str());
-    return ifile;
+    if(ifile)
+    {
+	return(true);
+    }
+    else
+    {
+	return(false);
+    }
 }
 
 string percent(int num, int den) {

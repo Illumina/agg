@@ -33,7 +33,7 @@ if __name__ == "__main__":
         args.nprocess=multiprocessing.cpu_count()
     sys.stderr.write("Using %d processes\n"%args.nprocess)
 
-    tmp_dir = tempfile.mkdtemp(prefix=args.tmp)
+    tmp_dir = tempfile.mkdtemp(prefix=args.tmp+"/")
     sys.stderr.write("tmp dir: %s\n"%tmp_dir)
     assert os.path.isdir(tmp_dir)
     gvcfs = [val.strip() for val in open(args.input).readlines()]
