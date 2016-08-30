@@ -70,7 +70,8 @@ bcf1_t *process(bcf1_t *rec)
       }
     }        
   }
-  rec->qual = sum_gq;
+  if(rec->qual<sum_gq)
+      rec->qual = sum_gq;
   return rec;
 }
 
