@@ -82,11 +82,11 @@ public:
   int  initialise(int nbin,int nsample) {  
     _nsample=nsample;
     _bins.clear();
-    _nbin=nbin;
+    _nbin=min(nsample,nbin);
     for(int i=0;i<_nbin;i++)      
-      _bins.push_back( ceil(nsample * (float)i / (float)nbin ));
+      _bins.push_back( ceil(nsample * (float)i / (float)_nbin ));
     _bins.push_back(nsample+1);
-    //    for(int i=0;i<_nbin;i++)            cerr << i << " " << _bins[i]<<endl;
+//    for(int i=0;i<_nbin;i++)            cerr << i << " " << _bins[i]<<endl;
     return(0);
   };
 
@@ -135,7 +135,7 @@ private:
 //1. normalised depth.
 class Standardiser {
 public:
-  Standardiser(const string & vcf1,const string & include);
+  Standardiser(const string & vcf1,const char *include);
   int estimateParameters();
   int standardise();
 private:
@@ -148,7 +148,7 @@ private:
   int _nsample;
 };
   
-Standardiser::Standardiser(const string & vcf1,const string & include) {
+Standardiser::Standardiser(const string & vcf1,const char *include) {
   _sr =  bcf_sr_init() ;      
   _vcf = vcf1;
 
@@ -161,7 +161,7 @@ Standardiser::Standardiser(const string & vcf1,const string & include) {
   for(int i=0;i<20;i++)
     af_bins.push_back( (float)i/20. );
   _filter=NULL;
-  if(!include.empty())    _filter = filter_init(_hdr, include.c_str());
+  if(include==NULL)    _filter = filter_init(_hdr, include);
 }
 
 //first pass 
@@ -321,7 +321,9 @@ int annotate1(int argc,char **argv) {
     switch (c)
       {
       case 'i': include = optarg; break;
-      default: usage();
+      default: 
+	  if(optarg!=NULL) die("Unknown argument:"+(string)optarg+"\n");
+	  else die("unrecognised argument");
       }
   }
   optind++;
