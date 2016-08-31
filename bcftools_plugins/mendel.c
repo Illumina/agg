@@ -164,7 +164,7 @@ int mendel_main(bcf1_t *rec, bcf_hdr_t *hdr) {
       if(m==0&&d==0)
       {
 	if(k==0) is_mendel_inconsistent=0;
-	else ndenovo=1;
+	else ndenovo++;
       }
       if((m==0&&d==1)||(m==1&&d==0))
 	if(k!=2) is_mendel_inconsistent=0;
