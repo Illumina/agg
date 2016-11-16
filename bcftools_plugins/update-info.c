@@ -70,11 +70,13 @@ bcf1_t *process(bcf1_t *rec)
     exit(1);
   }
   
-  assert(bcf_get_format_int32(in_hdr, rec, "PF", &f_pf, &npf)>0);
-  assert(bcf_get_format_int32(in_hdr, rec, "DP", &f_dp, &ndp)==n);
-  assert(bcf_get_format_int32(in_hdr, rec, "DPF", &f_dpf, &ndp)==n);
-  assert(bcf_get_format_int32(in_hdr, rec, "AD", &f_ad, &nad)>0);
 
+  assert(bcf_get_format_int32(in_hdr, rec, "DP", &f_dp, &ndp)==n);
+  assert(bcf_get_format_int32(in_hdr, rec, "AD", &f_ad, &nad)>0);
+  int has_pf = bcf_get_format_int32(in_hdr, rec, "PF", &f_pf, &npf)>0;
+  int has_dpf =bcf_get_format_int32(in_hdr, rec, "DPF", &f_dpf, &ndp)==n;
+
+  
   bcf_get_genotypes(in_hdr, rec, &gt, &ngt);
   int i_npass=0;
   float i_pf=0.;
@@ -82,14 +84,14 @@ bcf1_t *process(bcf1_t *rec)
   sum_dp=sum_dpf=sum_dpa=0;sum_ad[0]=0;sum_ad[1]=0;sum_ab[0]=0;sum_ab[1]=0;
   for(i=0;i<n;i++) {
     if(bcf_gt_allele(gt[2*i])>0 || bcf_gt_allele(gt[2*i+1])>0 ) {
-      if(f_pf[i]) i_npass++;
+      if(has_pf && f_pf[i]) i_npass++;
       nalt++;
     }        
 
     //depth
     if(f_dp[i]!=bcf_int32_missing) sum_dp+=f_dp[i];
     if(bcf_gt_allele(gt[i*2])>0 || bcf_gt_allele(gt[i*2+1])>0) {
-      if(f_dpf[i]!=bcf_int32_missing)      
+      if(has_dpf && f_dpf[i]!=bcf_int32_missing)      
 	sum_dpf+=f_dpf[i];
       if(f_dp[i]!=bcf_int32_missing)      
 	sum_dpa+=f_dp[i];
@@ -119,12 +121,15 @@ bcf1_t *process(bcf1_t *rec)
 
   //pf
   if(i_npass>0.0 && nalt>0) i_pf=(float)i_npass/nalt;
-  bcf_update_info_int32(out_hdr, rec, "NPASS", &i_npass, 1);
-  bcf_update_info_float(out_hdr, rec, "PF", &i_pf, 1);
+  if(has_pf)
+  {
+      bcf_update_info_int32(out_hdr, rec, "NPASS", &i_npass, 1);
+      bcf_update_info_float(out_hdr, rec, "PF", &i_pf, 1);
+  }
   bcf_update_info_int32(out_hdr, rec, "AD", sum_ad, 2);
   bcf_update_info_int32(out_hdr, rec, "AB", sum_ab, 2);
   bcf_update_info_int32(out_hdr, rec, "DP", &sum_dp, 1);
-  bcf_update_info_int32(out_hdr, rec, "DPF", &sum_dpf, 1);
+  if(has_dpf)  bcf_update_info_int32(out_hdr, rec, "DPF", &sum_dpf, 1);
   bcf_update_info_int32(out_hdr, rec, "DPA", &sum_dpa, 1);
 
   return rec;
