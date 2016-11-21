@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 
-all: agg test
+all: agg
 
 CFLAGS = -O2  $(ALLFLAGS) 
 
@@ -33,7 +33,7 @@ utils.o: utils.cpp utils.h
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c utils.cpp 
 agg_genotyper.o: agg_genotyper.cpp agg_genotyper.h version.h
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c agg_genotyper.cpp  
-agg_anno.o: agg_anno.cpp  version.h filter.h
+agg_anno.o: agg_anno.cpp agg_anno.h  version.h filter.h
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c agg_anno.cpp  
 agg_utils.o: agg_utils.cpp agg.h 
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $< 
@@ -42,7 +42,7 @@ depthMerger.o:  depthMerger.cpp depthMerger.h version.h
 agg_ingest2.o: agg_ingest2.cpp agg.h 
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $<  
 agg_ingest1.o: agg_ingest1.cpp agg_ingest1.h agg.h version.h
-	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $<  
+	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $<
 ##these files were taken from bcftools hence compiled as straight C
 filter.o: filter.c 
 	$(CC) $(CFLAGS) -c $<  
@@ -55,16 +55,12 @@ vcfnorm.o: vcfnorm.c
 vcmp.o: vcmp.c
 	$(CC) $(CFLAGS) -c $<  
 ##binary
-agg: agg.cpp agg_anno.o depthMerger.o vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.o filter.o version.h  $(HTSLIB)
-	$(CXX) $(CFLAGS)  -o agg agg.cpp vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o depthMerger.o version.o agg_anno.o filter.o $(HTSLIB) $(LFLAGS) 
-test: test.cpp depthMerger.o vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.h version.o $(HTSLIB)
-	$(CXX) $(CFLAGS)  -o test test.cpp vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o depthMerger.o  version.o $(HTSLIB) $(LFLAGS) 
-agg_ingest: agg_ingest.cpp vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.h version.o $(HTSLIB)
-	$(CXX) $(CFLAGS)  -o agg agg.cpp vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o $(HTSLIB) $(LFLAGS) 
-
+agg: agg.cpp  agg_anno.o depthMerger.o vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.o filter.o version.h  $(HTSLIB)
+	$(CXX) $(CFLAGS)  -o agg agg.cpp  vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o depthMerger.o version.o agg_anno.o filter.o $(HTSLIB) $(LFLAGS) 
+test: agg
+	cd test/;bash -e test.sh 
 
 #housekeeping
 all:  $(ALL)
 clean:
 	rm -rf *.o $(ALL) version.h
-

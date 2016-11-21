@@ -1,6 +1,8 @@
 #include "depthMerger.h"
 #include <pthread.h> 
 #define THREADED 0
+//#define DEBUG
+
 void depthReader::open(const char *depth_fname) { 
   //  cerr<<"Opening "<<depth_fname<<endl;
   _fp = gzopen(depth_fname, "r");
@@ -126,7 +128,9 @@ int depthMerger::startNewChromosome() {
   }
 
   assert(_cur_chr!=prev_chrom);
+#ifdef DEBUG  
   cerr << "bcf_hdr_nsamples(_hdr) = "<<bcf_hdr_nsamples(_hdr)<<endl;
+#endif  
   cerr << "chromosome start = " << bcf_hdr_id2name(_hdr,_cur_chr)<<":"<< _cur_pos<<endl;
   return(_cur_pos);
 }
@@ -308,7 +312,9 @@ int depthMerger::next() {
   //if chromosome is finished, move to next one
   if(n_on_chromosome==0) {
     cerr << "chromosome end   = " << bcf_hdr_id2name(_hdr,_cur_chr) <<":"<< _cur_pos<<endl;//
+#ifdef DEBUG
     cerr << "nopen="<<nopen<<endl;
+#endif    
     _cur_pos = -1;
     return(next());
   }
