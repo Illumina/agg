@@ -1,5 +1,6 @@
 2016-11-21
 *addition of the "agg anno" subcommand
+*added smoke test
 
 2016-11-16
 *tweak to update-info.c so that it will work on non-agg files
