@@ -534,7 +534,7 @@ int aggReader::next()
     return(0);//finished  
 }
 
-//adds sum(DP),sum(AD),mean(PF),AC,AN to INFO.
+//adds QUAL,sum(DP),sum(AD),mean(PF),AC,AN to INFO
 void aggReader::annotate_line()
 {
     int32_t ac=0,an=0,sum_dp=0,sum_dpf=0,sum_dpa=0;
@@ -542,8 +542,14 @@ void aggReader::annotate_line()
     int32_t sum_ab[2] = {0,0};
     float pf = 0.;
     float nalt=0;// number of genotypes containing an ALT allele.
+    float alt_gq_sum=0.; //sum any GQ where genotype is alternate. this is an approximate QUAL.
     for(int i=0;i<_nsample;i++)
     {
+	//quak
+	if(vr->gt[i*2]!=bcf_gt_missing || vr->gt[i*2+1]!=bcf_gt_missing)
+	{
+	    alt_gq_sum += vr->gq[i];
+	}
 	//allele counts
 	if(vr->gt[i*2]!=bcf_gt_missing)
 	{
@@ -620,7 +626,11 @@ void aggReader::annotate_line()
     bcf_update_info_int32(out_hdr, out_line, "AB", sum_ab, 2);		
     bcf_update_info_int32(out_hdr, out_line, "DPF", &sum_dpf, 1);
     bcf_update_info_int32(out_hdr, out_line, "DPA", &sum_dpa, 1);      
-		
+    if(ac==0)//no variants -> 0 qual
+	out_line->qual=0;
+    if(alt_gq_sum>out_line->qual)
+	out_line->qual = alt_gq_sum;
+
     bcf_update_filter(out_hdr,out_line,NULL,0);//just wipe the filters.
 }
 
