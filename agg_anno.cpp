@@ -300,10 +300,11 @@ int Standardiser::standardise() {
 
 static void usage(){
   fprintf(stderr, "\n");
-  fprintf(stderr, "Usage:   ftool annotate input.bcf\n");
+  fprintf(stderr, "Usage:   agg anno input.bcf\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Options:\n");
-  fprintf(stderr, "    -i, --include      filters to apply eg. -i 'QUAL>=10 && DP<100000 && HWE<10' \n");  
+  fprintf(stderr, "    -i, --include      filters to apply eg. -i 'QUAL>=10 && DP<100000 && HWE<10' \n");
+  fprintf(stderr, "    -R, --regions      a set of variants that are trusted (eg. 1000G) \n");  
   fprintf(stderr, "\n");
   fprintf(stderr, "\n");
   exit(1);
@@ -311,16 +312,19 @@ static void usage(){
 
 int annotate1(int argc,char **argv) {
   int c;
+  char *regions=NULL;
   static struct option loptions[] =    {
     {"include",required_argument,NULL,'i'},
+    {"regions",required_argument,NULL,'R'},    
     {0,0,0,0}
   };
   char *vcf1=NULL,*include=NULL;
   if(argc<2) usage();
-  while ((c = getopt_long(argc, argv, "i:",loptions,NULL)) >= 0) {  
+  while ((c = getopt_long(argc, argv, "i:R:",loptions,NULL)) >= 0) {  
     switch (c)
       {
       case 'i': include = optarg; break;
+      case 'R': regions = optarg; break;	  
       default: 
 	  if(optarg!=NULL) die("Unknown argument:"+(string)optarg+"\n");
 	  else die("unrecognised argument");
