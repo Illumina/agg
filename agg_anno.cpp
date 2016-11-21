@@ -19,7 +19,6 @@ inline float binomial_sd(int32_t a, int32_t b)
 //note this modifies x
 int madian(vector<float> &x, float &median, float &mad)
 {
-    assert(x.size() > 1);
     sort(x.begin(), x.end());
     //  vector<float> r;
     //  r.resize(x.size());
@@ -41,6 +40,11 @@ int madian(vector<float> &x, float &median, float &mad)
 
 int Residualiser::fit(vector<float> &x, vector<float> &y)
 {
+    if(x.size() <= 1)
+    {
+	die("no data to estimate parameters!");
+    }
+
     //model fitting.
     vector<float> r;
     madian(r, _median, _mad);
@@ -76,7 +80,12 @@ int BinResidualiser::initialise(int nbin, int nsample)
 
 int BinResidualiser::fit(vector<float> &x, vector<float> &y)
 {
-    cerr << "fitting" << endl;
+
+    if(x.size() <= 1)
+    {
+	die("no data to estimate parameters!");
+    }
+    
     assert(_nbin > 0);
     vector<float> x1;
     x1.reserve(x.size() / _nbin);
@@ -131,6 +140,7 @@ Standardiser::Standardiser(const string &vcf1, const char *include)
     _filter = NULL;
     if (include != NULL)
     {
+	cerr << "Using provided filter: "<< include<<endl;
         _filter = filter_init(_hdr, include);
     }
 }
@@ -141,6 +151,7 @@ Standardiser::Standardiser(const string &vcf1, const char *include)
 //3. annodatate mean/sd of residuals.
 int Standardiser::estimateParameters()
 {
+    cerr << "Estimating normalisation parameters..."<<endl;
     bcf1_t *line;
     int32_t info_dp, ac, an, dpf, dpa;
     int32_t *info_ab = (int32_t *)malloc(2 * sizeof(int32_t));
@@ -158,6 +169,7 @@ int Standardiser::estimateParameters()
     depth.reserve(50e6);
     alt_count.reserve(50e6);
     int maxn = 0;
+    int npass=0;
     while (bcf_sr_next_line(_sr))
     {
 	assert(bcf_sr_has_line(_sr, 0));
@@ -165,6 +177,7 @@ int Standardiser::estimateParameters()
 	bcf_unpack(line, BCF_UN_INFO);
 	if (_filter == NULL || filter_test(_filter, line, NULL))
 	{
+	    npass++;
 	    int32_t *ptr = &info_dp;
 	    if(bcf_get_info_int32(_hdr, line, "DP", &ptr, &nval) != 1)
 	    {
@@ -208,9 +221,12 @@ int Standardiser::estimateParameters()
 		n_dpa += dpa;
 	    }
 	    if (an > maxn)
+	    {
 		maxn = an;
+	    }
 	}
     }
+    cerr<<npass<<" sites passed provided filters"<<endl;
     _p_dpf = n_dpf / (n_dpf + n_dpa);
     cerr << "_p_dpf=" << _p_dpf << endl;
     //  fit_betab(&dpa_dpf,_alpha,_beta);
@@ -227,6 +243,7 @@ int Standardiser::estimateParameters()
 //re-open file. append INFO/S_DP - our normalised depth measure.
 int Standardiser::standardise(char *output_file,char *output_type)
 {
+    cerr << "Annotating INFO fields..."<<endl;
     bcf1_t *line;
     int32_t info_dp, ac, an, dpf, dpa;
     int32_t *info_ab = (int32_t *)malloc(2 * sizeof(int32_t));
