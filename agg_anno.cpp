@@ -215,10 +215,8 @@ int Standardiser::estimateParameters()
     cerr << "_p_dpf=" << _p_dpf << endl;
     //  fit_betab(&dpa_dpf,_alpha,_beta);
     bcf_sr_destroy(_sr);
-    cerr << "dp quantiles:" << endl;
     _dp_residuals.initialise(20, maxn);
     _dp_residuals.fit(alt_count, depth);
-    cerr << "ab quantiles:" << endl;
     _ab_residuals.initialise(20, maxn);
     _ab_residuals.fit(alt_count, ab);
     free(info_ab);
