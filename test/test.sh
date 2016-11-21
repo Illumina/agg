@@ -13,3 +13,4 @@ bcftools concat chr21.bcf chr22.bcf -Ou  | bcftools view -Ob -o autosomes.bcf --
 bcftools index autosomes.bcf
 
 ../agg anno autosomes.bcf  -Ob -o autosomes.anno.bcf
+
