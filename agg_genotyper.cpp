@@ -58,6 +58,8 @@ variantRow::~variantRow()
     free(ad);
     free(gq);
     free(gt);
+    free(pf);
+    free(dpf);
 }
 
 bcf_srs_t *vcf_ropen(const vector<string>& input_files,const string &region)
@@ -84,7 +86,9 @@ bcf_srs_t *vcf_ropen(const vector<string>& input_files,const string &region)
 aggReader::aggReader(const vector<string>& input_files,const string &region)
 {
     nreader = input_files.size();
-    _nsample = 0;  
+    _nsample = 0;
+    line_count=0;
+    _current_rid = NULL;
     vector<string> tmp(nreader);
     for(int i=0;i<nreader;i++)    tmp[i]=input_files[i];
     var_rdr = vcf_ropen(tmp,region);
@@ -141,7 +145,6 @@ aggReader::aggReader(const vector<string>& input_files,const string &region)
     cerr << _nsample<< " samples"<<endl;
     dp_pos=-1;
     moveDepthForward();
-    line_count=0;
 }
 
 aggReader::~aggReader()
@@ -221,7 +224,7 @@ int aggReader::syncBuffer()
 	    }
 	}
 
-	if(dp_pos <= var_stop && dp_chr==cur_chr && dp_open) //read in intervals up to end of variant position or chromosome ends.
+	if(dp_pos <= var_stop && dp_chr==_current_rid && dp_open) //read in intervals up to end of variant position or chromosome ends.
 	{
 	    if(dp_pos>=var_start)  //are we interested in depth here?
 	    {
@@ -235,7 +238,7 @@ int aggReader::syncBuffer()
 	    }   
 	    dp_open=moveDepthForward();
 	}
-	if(dp_chr!=cur_chr || !dp_open) break;
+	if(dp_chr!=_current_rid || !dp_open) break;
     }
 
 #ifdef DEBUG   	
@@ -362,16 +365,15 @@ int aggReader::next()
 	    if( bcf_sr_has_line(var_rdr,i) )
 	    {
 		line[i]=bcf_sr_get_line(var_rdr,i);
-
-		if(line[i]->rid != cur_chr || line_count==0)
+		if(line[i]->rid != _current_rid || line_count==0)
 		{
-		    cur_chr = line[i]->rid;
-		    while(dp_chr!=cur_chr)   	    moveDepthForward();
+		    _current_rid = line[i]->rid;
+		    while(dp_chr!=_current_rid)   	    moveDepthForward();
 		    if(line_count>0)
 			cerr <<line_count<<" variants genotyped." <<endl;
 
 #ifdef DEBUG
-			cerr << "rid = "<<cur_chr<<" ("<<	  bcf_hdr_int2id(var_rdr->readers[i].header,BCF_DT_CTG,cur_chr)<<")"<<endl;
+			cerr << "rid = "<<_current_rid<<" ("<<	  bcf_hdr_int2id(var_rdr->readers[i].header,BCF_DT_CTG,_current_rid)<<")"<<endl;
 			cerr << "dp_chr = "<<dp_chr<<"    dp_pos = "<< dp_pos<<endl;
 #endif
 
@@ -691,8 +693,9 @@ int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads 
 	    nwritten++;
 	}
     }
+    bcf_destroy(out_line);
     hts_close(out_fh);
-    //  bcf_hdr_destroy(hdr);
+    bcf_hdr_destroy(out_hdr);
     return(nwritten);
 }
 

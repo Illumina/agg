@@ -62,7 +62,7 @@ class aggReader {
   variantRow *vr;
   int32_t*_dp,*_out_dp,ndp;
   int32_t*_gq,*_out_gq,ngq;
-  int cur_chr;//current chromosome (bcf key)
+  int _current_rid;//current chromosome (bcf key)
   int dp_chr;
   int line_count;
   int moveDepthForward();
