@@ -20,6 +20,7 @@ int fillHeader(bcf_hdr_t *hdr) //fills in the standard stuff for an agg header.
     bcf_hdr_append(hdr, "##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed.\">");
     bcf_hdr_append(hdr, "##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">");
     bcf_hdr_append(hdr, "##FORMAT=<ID=PF,Number=A,Type=Integer,Description=\"variant was PASS filter in original sample gvcf\">");
+//    bcf_hdr_append(hdr, "##INFO=<ID=ECR,Number=1,Type=Float,Description=\"effective call rate - weighted sum of GQs divided by sample size \">");    
     return(0);
 }
 
@@ -482,8 +483,7 @@ int aggReader::next()
 		// bcf_update_filter(out_hdr, out_line, &tmpi, 1);
 		out_line->rid = line[i]->rid;
 		out_line->pos = line[i]->pos;
-		if(line[i]->qual > out_line->qual)
-		    out_line->qual =  line[i]->qual ;
+		out_line->qual += line[i]->qual ;
 	    }
 
 	    for(int j=0;j<ntmp;j++)
@@ -542,13 +542,17 @@ void aggReader::annotate_line()
     int32_t sum_ab[2] = {0,0};
     float pf = 0.;
     float nalt=0;// number of genotypes containing an ALT allele.
-    float alt_gq_sum=0.; //sum any GQ where genotype is alternate. this is an approximate QUAL.
+    float alt_gq_sum=0.,callrate=0.; //sum any GQ where genotype is alternate. this is an approximate QUAL.
     for(int i=0;i<_nsample;i++)
     {
-	//quak
+	//qual / ecr
 	if(vr->gt[i*2]!=bcf_gt_missing || vr->gt[i*2+1]!=bcf_gt_missing)
 	{
-	    alt_gq_sum += vr->gq[i];
+	    if(bcf_gt_allele(vr->gt[i*2])>0 || bcf_gt_allele(vr->gt[i*2+1])>0)
+	    {
+		alt_gq_sum += vr->gq[i];
+	    }
+	    callrate += 1. - pow(10,vr->gq[i]/-10.);		
 	}
 	//allele counts
 	if(vr->gt[i*2]!=bcf_gt_missing)
@@ -621,6 +625,7 @@ void aggReader::annotate_line()
     bcf_update_info_int32(out_hdr, out_line, "AN", &an, 1);
     bcf_update_info_int32(out_hdr, out_line, "AC", &ac, 1);
     bcf_update_info_float(out_hdr, out_line, "PF", &pf, 1);
+//    bcf_update_info_float(out_hdr, out_line, "ECR", &callrate, 1);    
     bcf_update_info_int32(out_hdr, out_line, "AD", sum_ad, 2);
     bcf_update_info_int32(out_hdr, out_line, "DP", &sum_dp, 1);
     bcf_update_info_int32(out_hdr, out_line, "AB", sum_ab, 2);		
@@ -628,8 +633,7 @@ void aggReader::annotate_line()
     bcf_update_info_int32(out_hdr, out_line, "DPA", &sum_dpa, 1);      
     if(ac==0)//no variants -> 0 qual
 	out_line->qual=0;
-    if(alt_gq_sum>out_line->qual)
-	out_line->qual = alt_gq_sum;
+
 
     bcf_update_filter(out_hdr,out_line,NULL,0);//just wipe the filters.
 }
