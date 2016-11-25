@@ -14,6 +14,7 @@ int main(int argc, char **argv) {
     cerr << "\tingest1\t\tconverts gvcfs to input suitable for agg ingest2" << endl;
     cerr << "\tingest2\t\tuses output files from ingest1 to build an agg chunk" << endl;
     cerr << "\tgenotype\tgenotypes and merges agg chunks into a multi-sample bcf/vcf" << endl;
+    cerr << "\tanno\t\tannotates some QC metrics" << endl;    
     return(1);
   }
   else if(((string)argv[1]) == "ingest2") {
@@ -26,6 +27,9 @@ int main(int argc, char **argv) {
   else if(((string)argv[1]) == "genotype") {
     view1(argc, argv);
   }
+  else if(((string)argv[1]) == "anno") {
+    annotate1(argc, argv);
+  }  
   else if(((string)argv[1]) == "merge") {
     die("agg merge is not yet implemented. you can (carefully) merge dpt/bcf files using bcftools merge");
   }

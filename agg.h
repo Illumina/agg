@@ -60,6 +60,7 @@ int view1(int argc,char **argv);
 int count1(int argc,char **argv);
 
 int update1(int argc,char **argv);
+int annotate1(int argc,char **argv);
 
 double hwe(vector<unsigned int> count);
 

@@ -31,109 +31,162 @@
 
 bcf_hdr_t *in_hdr, *out_hdr;
 int *gt = NULL, ngt = 0,n;
-int *f_pf=NULL,npf=0,*f_dp,*f_dpf,ndp=0,*f_ad,nad=0;;
+int *f_pf=NULL,npf=0,*f_dp,*f_dpf,ndp=0,*f_ad,nad=0,*f_gq=NULL,ngq=0;
 int sum_dp,sum_dpf,sum_dpa,sum_ad[2],sum_ab[2];
 
 
 const char *about(void)
 {
-  return "updates agg info fields.\n";
+    return "updates agg info fields.\n";
 }
 
 int init(int argc, char **argv, bcf_hdr_t *in, bcf_hdr_t *out)
 {
-  in_hdr  = in;
-  out_hdr = out;
-  n =  bcf_hdr_nsamples(in_hdr);
-  gt = (int *)malloc(2*n*sizeof(int));
-  f_pf = (int *)malloc(n*sizeof(int));
-  f_dp = (int *)malloc(n*sizeof(int));
-  f_dpf = (int *)malloc(n*sizeof(int));
-  f_ad = (int *)malloc(2*n*sizeof(int));
-  bcf_hdr_append(out_hdr, "##INFO=<ID=PF,Number=A,Type=Float,Description=\"proportion of genotypes containing an ALT that passed the original single sample gvcf filter\">");
-  bcf_hdr_append(out_hdr, "##INFO=<ID=AD,Number=R,Type=Integer,Description=\"sum of allele depths for respective alleles (all samples)\">"); 
-  bcf_hdr_append(out_hdr, "##INFO=<ID=AB,Number=R,Type=Integer,Description=\"sum of allele depths for respective alleles (ALT samples)\">"); 
-  bcf_hdr_append(out_hdr, "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"sum of depth  across all samples\">");
-  bcf_hdr_append(out_hdr, "##INFO=<ID=DPA,Number=1,Type=Integer,Description=\"sum of depth for sites alt genotypes\">");
-  bcf_hdr_append(out_hdr, "##INFO=<ID=DPF,Number=1,Type=Integer,Description=\"sum of basecalls filtered from input prior to site genotyping\">");
-  return 0;
-
-
+    in_hdr  = in;
+    out_hdr = out;
+    n =  bcf_hdr_nsamples(in_hdr);
+    gt = (int *)malloc(2*n*sizeof(int));
+    f_pf = (int *)malloc(n*sizeof(int));
+    f_dp = (int *)malloc(n*sizeof(int));
+    f_dpf = (int *)malloc(n*sizeof(int));
+    f_ad = (int *)malloc(2*n*sizeof(int));
+    bcf_hdr_append(out_hdr, "##INFO=<ID=PF,Number=A,Type=Float,Description=\"proportion of genotypes containing an ALT that passed the original single sample gvcf filter\">");
+    bcf_hdr_append(out_hdr, "##INFO=<ID=NPASS,Number=A,Type=Integer,Description=\"number of ALTs that passed the original single sample gvcf filter\">");
+    bcf_hdr_append(out_hdr, "##INFO=<ID=AD,Number=R,Type=Integer,Description=\"sum of allele depths for respective alleles (all samples)\">"); 
+    bcf_hdr_append(out_hdr, "##INFO=<ID=AB,Number=R,Type=Integer,Description=\"sum of allele depths for respective alleles (het samples)\">"); 
+    bcf_hdr_append(out_hdr, "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"sum of depth  across all samples\">");
+    bcf_hdr_append(out_hdr, "##INFO=<ID=DPA,Number=1,Type=Integer,Description=\"sum of depth for sites alt genotypes\">");
+    bcf_hdr_append(out_hdr, "##INFO=<ID=DPF,Number=1,Type=Integer,Description=\"sum of basecalls filtered from input prior to site genotyping\">");
+    bcf_hdr_append(out_hdr, "##INFO=<ID=ECR,Number=1,Type=Float,Description=\"effective call rate - weighted sum of GQs divided by sample size \">");
+    return 0;
 }
 
-bcf1_t *process(bcf1_t *rec)
+
+bcf1_t *update_info_fields(bcf1_t *rec,bcf_hdr_t *_in_hdr, bcf_hdr_t *_out_hdr)
 {
-  int i;
-  if(rec->n_allele!=2) {
-    fprintf(stderr,"ERROR: multi-allelic variant found. this is not agg output\n");
-    exit(1);
-  }
-  
-  assert(bcf_get_format_int32(in_hdr, rec, "PF", &f_pf, &npf)>0);
-  assert(bcf_get_format_int32(in_hdr, rec, "DP", &f_dp, &ndp)==n);
-  assert(bcf_get_format_int32(in_hdr, rec, "DPF", &f_dpf, &ndp)==n);
-  assert(bcf_get_format_int32(in_hdr, rec, "AD", &f_ad, &nad)>0);
-
-  bcf_get_genotypes(in_hdr, rec, &gt, &ngt);
-
-  float i_pf=0.;
-  float nalt=0;
-  sum_dp=sum_dpf=sum_dpa=0;sum_ad[0]=0;sum_ad[1]=0;sum_ab[0]=0;sum_ab[1]=0;
-  for(i=0;i<n;i++) {
-    if(bcf_gt_allele(gt[2*i])>0 || bcf_gt_allele(gt[2*i+1])>0 ) {
-      if(f_pf[i]) i_pf++;
-      nalt++;
-    }        
-
-    //depth
-    if(f_dp[i]!=bcf_int32_missing) sum_dp+=f_dp[i];
-    if(bcf_gt_allele(gt[i*2])>0 || bcf_gt_allele(gt[i*2+1])>0) {
-      if(f_dpf[i]!=bcf_int32_missing)      
-	sum_dpf+=f_dpf[i];
-      if(f_dp[i]!=bcf_int32_missing)      
-	sum_dpa+=f_dp[i];
-      else 
-	if(f_ad[i*2]!=bcf_int32_missing && f_ad[i*2+1]!=bcf_int32_missing)
-	  sum_dpa+=f_ad[i*2]+f_ad[i*2+1];
-
-    }    
-    //ad
-    if(gt[i*2+1]!=bcf_gt_missing && gt[i*2]!=bcf_gt_missing) {
-      //hom
-      if(f_ad[i*2]!=bcf_int32_missing)
-	sum_ad[0]+=f_ad[i*2];
-      else
-	sum_ad[0]+=f_dp[i];
-      //alt
-      if(bcf_gt_allele(gt[i*2])>0 || bcf_gt_allele(gt[i*2+1])>0)
-	sum_ad[1] += f_ad[i*2+1];
-      //het
-      if(bcf_gt_allele(gt[i*2])!=bcf_gt_allele(gt[i*2+1])) {
-	sum_ab[0] += f_ad[i*2];
-	sum_ab[1] += f_ad[i*2+1];
-      }
-
+    int i;
+    if(rec->n_allele!=2) 
+    {
+	fprintf(stderr,"ERROR: multi-allelic variant found. this is not agg output\n");
+	exit(1);
     }
-  }
+    int nval=bcf_get_format_int32(_in_hdr, rec, "DP", &f_dp, &ndp);
+    assert(nval==n);
+    assert(bcf_get_format_int32(_in_hdr, rec, "AD", &f_ad, &nad)>0);
+    int has_pf = bcf_get_format_int32(_in_hdr, rec, "PF", &f_pf, &npf)>0;
+    int has_dpf =bcf_get_format_int32(_in_hdr, rec, "DPF", &f_dpf, &ndp)==n;
+    assert(bcf_get_format_int32(_in_hdr, rec, "GQ", &f_gq, &ngq)==n);
+  
+    bcf_get_genotypes(_in_hdr, rec, &gt, &ngt);
+    int i_npass=0;
+    float i_pf=0.;
+    float nalt=0;
+    float callrate=0;
+    float newqual=0;
+    int ac=0;
+    sum_dp=sum_dpf=sum_dpa=0;sum_ad[0]=0;sum_ad[1]=0;sum_ab[0]=0;sum_ab[1]=0;
+    for(i=0;i<n;i++) 
+    {
+	if(f_gq[i]!=bcf_int32_missing)
+	{
+	    callrate += 1. - pow(10,f_gq[i]/-10.);
+	}
+	if(bcf_gt_allele(gt[2*i])>0 || bcf_gt_allele(gt[2*i+1])>0 ) 
+	{
+	    if(has_pf && f_pf[i]) i_npass++;
+	    nalt++;
+	    if(f_gq[i]!=bcf_int32_missing)
+		newqual+=f_gq[i];
+	    ac+= bcf_gt_allele(gt[2*i]);
+	    ac+=bcf_gt_allele(gt[2*i+1]);
+	}        
 
-  //pf
-  if(i_pf>0.0 && nalt>0) i_pf/=nalt;
-  else i_pf=0.;
+	//depth
+	if(f_dp[i]!=bcf_int32_missing) 
+	{
+	    sum_dp+=f_dp[i];
+	}
+	if(bcf_gt_allele(gt[i*2])>0 || bcf_gt_allele(gt[i*2+1])>0) 
+	{
+	    if(has_dpf && f_dpf[i]!=bcf_int32_missing)
+	    {      
+		sum_dpf+=f_dpf[i];
+	    }
+	    if(f_dp[i]!=bcf_int32_missing)
+	    {      
+		sum_dpa+=f_dp[i];
+	    }
+	    else 
+	    { 
+		if(f_ad[i*2]!=bcf_int32_missing && f_ad[i*2+1]!=bcf_int32_missing)
+		{
+		    sum_dpa+=f_ad[i*2]+f_ad[i*2+1];
+		}      
+	    }
+	}    
+	//ad
+	if(gt[i*2+1]!=bcf_gt_missing && gt[i*2]!=bcf_gt_missing) 
+	{
+	    //hom
+	    if(f_ad[i*2]!=bcf_int32_missing)
+	    {
+		sum_ad[0]+=f_ad[i*2];
+	    }
+	    else
+	    {
+		sum_ad[0]+=f_dp[i];
+	    }
+	    //alt
+	    if(bcf_gt_allele(gt[i*2])>0 || bcf_gt_allele(gt[i*2+1])>0)
+	    {
+		sum_ad[1] += f_ad[i*2+1];
+	    }
+	    //het
+	    if(bcf_gt_allele(gt[i*2])!=bcf_gt_allele(gt[i*2+1])) 
+	    {
+		sum_ab[0] += f_ad[i*2];
+		sum_ab[1] += f_ad[i*2+1];
+	    }
+	}
+    }
 
-  bcf_update_info_float(out_hdr, rec, "PF", &i_pf, 1);
-  bcf_update_info_int32(out_hdr, rec, "AD", sum_ad, 2);
-  bcf_update_info_int32(out_hdr, rec, "AB", sum_ab, 2);
-  bcf_update_info_int32(out_hdr, rec, "DP", &sum_dp, 1);
-  bcf_update_info_int32(out_hdr, rec, "DPF", &sum_dpf, 1);
-  bcf_update_info_int32(out_hdr, rec, "DPA", &sum_dpa, 1);
-
-  return rec;
+    //pf
+    if(i_npass>0.0 && nalt>0)
+    {
+	i_pf=(float)i_npass/nalt;
+    }
+    if(has_pf)
+    {
+	bcf_update_info_int32(_out_hdr, rec, "NPASS", &i_npass, 1);
+	bcf_update_info_float(_out_hdr, rec, "PF", &i_pf, 1);
+    }
+    callrate/=n;
+    bcf_update_info_int32(_out_hdr, rec, "AD", sum_ad, 2);
+    bcf_update_info_int32(_out_hdr, rec, "AB", sum_ab, 2);
+    bcf_update_info_int32(_out_hdr, rec, "DP", &sum_dp, 1);
+    bcf_update_info_float(_out_hdr, rec, "ECR", &callrate, 1);
+    if(has_dpf)  
+    {
+	bcf_update_info_int32(_out_hdr, rec, "DPF", &sum_dpf, 1);  
+    }
+    bcf_update_info_int32(_out_hdr, rec, "DPA", &sum_dpa, 1);
+    if(ac==0)
+	rec->qual=0;
+    if(rec->qual<newqual)
+	rec->qual=newqual;
+    return rec;
 }
 
 void destroy(void)
 {
-  free(f_dp);
-  free(f_ad);
-  free(f_pf);
-  free(gt);
+    free(f_dp);
+    free(f_ad);
+    free(f_pf);
+    free(f_gq);
+    free(gt);
+}
+
+bcf1_t *process(bcf1_t *rec)
+{
+    return(update_info_fields(rec,in_hdr,out_hdr)) ;
 }
