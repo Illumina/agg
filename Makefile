@@ -9,7 +9,7 @@ debug: CFLAGS =  -pg -g -Wall $(ALLFLAGS)
 debug: all 
 
 #linker stuff
-HTSDIR = htslib-1.3
+HTSDIR = htslib-1.3.2
 include $(HTSDIR)/htslib.mk
 HTSLIB = $(HTSDIR)/libhts.a
 IFLAGS = -I$(HTSDIR)
