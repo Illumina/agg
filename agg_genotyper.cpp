@@ -88,7 +88,7 @@ aggReader::aggReader(const vector<string>& input_files,const string &region)
     nreader = input_files.size();
     _nsample = 0;
     line_count=0;
-    _current_rid = NULL;
+    _current_rid = -1;
     vector<string> tmp(nreader);
     for(int i=0;i<nreader;i++)    tmp[i]=input_files[i];
     var_rdr = vcf_ropen(tmp,region);
@@ -109,9 +109,9 @@ aggReader::aggReader(const vector<string>& input_files,const string &region)
 	    interval_end=interval_start;
 	}
 	interval_start=max(0,interval_start);
-	cerr << "interval_start = "<<interval_start<<" interval_end="<<interval_end<<endl;
+	cerr << "interval_start = "<<interval_start+1<<" interval_end="<<interval_end+1<<endl;
     }
-    else
+    else//no interval specified. 
     {
 	interval_start=0;
 	interval_end=INT32_MAX;
@@ -685,7 +685,7 @@ int aggReader::writeVcf(const char *output_file,char *output_type,int n_threads 
 
     while(next())
     {
-	if(var_start>=interval_start)
+	if(var_start>=interval_start && var_stop<interval_end)
 	{
 	    annotate_line();
 	    bcf_write1(out_fh, out_hdr, out_line) ;
