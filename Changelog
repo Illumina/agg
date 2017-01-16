@@ -1,3 +1,6 @@
+2016-01-16
+*make will now compile plugins
+
 2016-11-25
 *switched to htslib-1.3.2
 

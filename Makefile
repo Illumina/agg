@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 
-all: agg
+all: agg plugins
 
 CFLAGS = -O2  $(ALLFLAGS) 
 
@@ -27,6 +27,19 @@ endif
 version.h:
 	echo '#define VERSION "$(VERSION)"' > $@
 	echo '#define BCFTOOLS_VERSION "$(BCFTOOLS_VERSION)"' >> $@
+
+# Plugin rules
+PLUGINC = $(foreach dir, bcftools_plugins, $(wildcard $(dir)/*.c))
+PLUGINS = $(PLUGINC:.c=.so)
+
+%.so: %.c version.h version.c
+	$(CC) -fPIC -shared -g -Wall -Wc++-compat -O2 -I. -Ihtslib-1.3.1 -o $@ version.c $<
+#	$(CC) $(PLUGIN_FLAGS) $(CFLAGS) $(EXTRA_CPPFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ version.c $< $(LIBS)
+
+
+
+plugins: $(PLUGINS)
+
 
 ##agg source code
 utils.o: utils.cpp utils.h
@@ -63,4 +76,4 @@ test: agg
 #housekeeping
 all:  $(ALL)
 clean:
-	rm -rf *.o $(ALL) version.h
+	rm -rf *.o $(ALL) version.h bcftools_plugins/*.so
