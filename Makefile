@@ -33,7 +33,7 @@ PLUGINC = $(foreach dir, bcftools_plugins, $(wildcard $(dir)/*.c))
 PLUGINS = $(PLUGINC:.c=.so)
 
 %.so: %.c version.h version.c
-	$(CC) -fPIC -shared -g -Wall -Wc++-compat -O2 -I. -Ihtslib-1.3.1 -o $@ version.c $<
+	$(CC) -fPIC -shared -g -Wall -Wc++-compat -O2 -I. -Ihtslib-1.3.2 -o $@ version.c $<
 #	$(CC) $(PLUGIN_FLAGS) $(CFLAGS) $(EXTRA_CPPFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ version.c $< $(LIBS)
 
 
