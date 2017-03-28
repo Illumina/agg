@@ -78,7 +78,7 @@ bcf1_t *update_info_fields(bcf1_t *rec,bcf_hdr_t *_in_hdr, bcf_hdr_t *_out_hdr)
 	{
 	    f_dp[i]=0;
 	}
-	if( (bcf_gt_allele(gt[2*i])==0&&bcf_gt_allele(gt[2*i+1])==0) || (gt[i*2+1]!=bcf_gt_missing && gt[i*2]!=bcf_gt_missing) )
+	if( (bcf_gt_allele(gt[2*i])==0&&bcf_gt_allele(gt[2*i+1])==0) || (gt[i*2+1]==bcf_gt_missing && gt[i*2]==bcf_gt_missing) )
 	{
 	    if(f_ad[i*2]==bcf_int32_missing || f_ad[i*2+1]==bcf_int32_missing)
 	    {
