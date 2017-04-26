@@ -2,7 +2,7 @@ agg: a utility for aggregating Illumina-style GVCFs. This software is not commer
 
 Copyright (c) 2016, Illumina, Inc. All rights reserved. 
 
-The agg source code is provided under the [GPLv3 license] (LICENSE).
+The agg source code is provided under the [GPLv3 license](LICENSE).
 
 ### Summary
 
