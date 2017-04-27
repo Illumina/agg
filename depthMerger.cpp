@@ -246,7 +246,7 @@ int depthMerger::next() {
   int n_on_chromosome=0;
   int nopen=0;
 
-  //kt_for version - slow didnt bother finishing running it
+  //kt_for version - seems slower
   // for(int i=0;i<_nsample;i++)
   //   if( r[i]->open ) 
   //     nopen++;
@@ -280,7 +280,7 @@ int depthMerger::next() {
     }
   }
 #else
-  //producer-consumer implementation. unmitigated disaster. 320 seconds using 16 threads. nthreads must equal nsample or you get a race condition.
+  //producer-consumer implementation. 
   for(int i=0;i<_nsample;i++)  {              
     lock(i);
     if( r[i]->open )       nopen++;

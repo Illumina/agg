@@ -19,7 +19,7 @@ CXX_FLAGS = -std=c++0x -Wno-write-strings
 
 
 GIT_HASH := $(shell git describe --abbrev=4 --always )
-BCFTOOLS_VERSION=1.3
+BCFTOOLS_VERSION=1.4
 VERSION = 0.3.5
 ifneq "$(wildcard .git)" ""
 VERSION = $(shell git describe --always)
@@ -33,13 +33,10 @@ PLUGINC = $(foreach dir, bcftools_plugins, $(wildcard $(dir)/*.c))
 PLUGINS = $(PLUGINC:.c=.so)
 
 %.so: %.c version.h version.c
-	$(CC) -fPIC -shared -g -Wall -Wc++-compat -O2 -I. -Ihtslib-1.3.2 -o $@ version.c $<
+	$(CC) -fPIC -shared -g -Wall -Wc++-compat -O2 -I. -I$(HTSDIR) -o $@ version.c $<
 #	$(CC) $(PLUGIN_FLAGS) $(CFLAGS) $(EXTRA_CPPFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ version.c $< $(LIBS)
 
-
-
 plugins: $(PLUGINS)
-
 
 ##agg source code
 utils.o: utils.cpp utils.h
@@ -66,10 +63,12 @@ vcfmerge.o: vcfmerge.c
 vcfnorm.o: vcfnorm.c
 	$(CC) $(CFLAGS) -c $<  
 vcmp.o: vcmp.c
+	$(CC) $(CFLAGS) -c $<
+regidx.o: regidx.c
 	$(CC) $(CFLAGS) -c $<  
 ##binary
-agg: agg.cpp  agg_anno.o depthMerger.o vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.o filter.o version.h  $(HTSLIB)
-	$(CXX) $(CFLAGS)  -o agg agg.cpp  vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o depthMerger.o version.o agg_anno.o filter.o $(HTSLIB) $(LFLAGS) 
+agg: agg.cpp  agg_anno.o depthMerger.o vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.o filter.o regidx.o version.h  $(HTSLIB)
+	$(CXX) $(CFLAGS)  -o agg agg.cpp regidx.o vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o depthMerger.o version.o agg_anno.o filter.o $(HTSLIB) $(LFLAGS) 
 test: agg
 	cd test/;bash -e test.sh 
 

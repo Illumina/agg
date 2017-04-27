@@ -13,6 +13,7 @@ if __name__ == "__main__":
     parser.add_argument('-nprocess', metavar='nprocess', type=int, help='number of processes to use (defaults to number of CPUs found)',default=None)
     parser.add_argument('-agg', metavar='agg', type=str,default=None, help='agg binary (defaults to binary in script dir)')
     parser.add_argument('--ignore-non-matching-ref', action='store_true',default=False)
+    parser.add_argument('--debug', action='store_true',default=False)    
     args = parser.parse_args()
     sys.stderr.write(" ".join(sys.argv)+"\n")
 
@@ -70,9 +71,11 @@ if __name__ == "__main__":
         sys.stderr.write(cmd+"\n")
         subprocess.check_output(cmd,shell=True)
         sys.stderr.write("ingest2 took %f seconds\n"%(time.time()-time0))
-        shutil.rmtree(tmp_dir)
+        if not args.debug:
+            shutil.rmtree(tmp_dir)
     except subprocess.CalledProcessError:
         sys.stderr.write("there was a problem. removing temporary files and exiting\n")
-        shutil.rmtree(tmp_dir)
+        if not args.debug:        
+            shutil.rmtree(tmp_dir)
         sys.exit(1)
 
