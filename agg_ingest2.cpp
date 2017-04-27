@@ -19,7 +19,8 @@ extern "C" {
 #include "htslib/hts.h"
 
 //this is a dummy definition for a function pilfered directly from bcftools.
-int dummy_main_vcfmerge(int argc, char *argv[],char *file_list, char *output_fname,int nthreads);
+    int dummy_main_vcfmerge(int argc, char *argv[],char *file_list, char *output_fname,int nthreads);
+    int main_vcfmerge(int argc, char *argv[]);
 }
 
 
@@ -88,12 +89,45 @@ int merge_main(int argc,char **argv) {
   //merge variants.
   char *output_bcf=(char *)malloc(strlen(output)+5);  strcat(strcpy(output_bcf,output),".bcf");
   cerr << "Merging variants..." <<output_bcf<<endl;
-  dummy_main_vcfmerge(argc,argv,file_list_fname,output_bcf,n_threads);
+
+  //variant merging code - this is just calling bcftools merge 
+  //this makes a dummy command line to feed to vcfmerge.c (taken straight from bcftools)
+  char **vcfmerge_argv = (char **)malloc(sizeof(char *)*(file_list.size()+11));
+  int vcfmerge_argc=0;
+  vcfmerge_argv[vcfmerge_argc++]="merge";
+  vcfmerge_argv[vcfmerge_argc++]="-o";
+  vcfmerge_argv[vcfmerge_argc++]=output_bcf;
+  vcfmerge_argv[vcfmerge_argc++]="-O";
+  vcfmerge_argv[vcfmerge_argc++]="b";
+  vcfmerge_argv[vcfmerge_argc++]="-m";
+  vcfmerge_argv[vcfmerge_argc++]="none";
+  vcfmerge_argv[vcfmerge_argc++]="-i";
+  vcfmerge_argv[vcfmerge_argc++]="-";
+  vcfmerge_argv[vcfmerge_argc++]="--threads";
+  vcfmerge_argv[vcfmerge_argc]=new char[10];
+  snprintf(vcfmerge_argv[vcfmerge_argc++], 10, "%d", n_threads);
+
+  for(size_t i=0;i<file_list.size();i++)
+  {
+      vcfmerge_argv[vcfmerge_argc]=new char[file_list[i].size()+1];
+      strcpy(vcfmerge_argv[vcfmerge_argc],file_list[i].c_str());
+      vcfmerge_argc++;
+  }
+
+  // cerr<<"bcftools merge argv: ";
+  // for(int i=0;i<vcfmerge_argc;i++)
+  // {
+  //     cerr<<" "<< vcfmerge_argv[i];
+  // }
+
+  cerr<<endl;
+  optind=0;//reset getopt
+  main_vcfmerge(vcfmerge_argc, vcfmerge_argv);  
   output_bcf=(char *)malloc(strlen(output)+5);  strcat(strcpy(output_bcf,output),".bcf");
   cerr << "Indexing " <<output_bcf<<endl;
   bcf_index_build(output_bcf, BCF_LIDX_SHIFT);
 
-  ///build the depth tract
+  ///build the depth tract - custom agg code
   char *dp_out_fname=(char *)malloc(strlen(output)+5);
   strcat(strcpy(dp_out_fname,output),".dpt");
   depthMerger d(file_list);
