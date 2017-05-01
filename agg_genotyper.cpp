@@ -440,21 +440,21 @@ int aggReader::next()
 	    int32_t *gq1= &(vr->gq[offset]);
 	    int32_t *ad=&(vr->ad[n_allele*offset]);
 	    bool has_line=bcf_sr_has_line(var_rdr,i);
-	    int ntmp = bcf_hdr_nsamples(hdr);
+	    int num_samples_in_this_reader = bcf_hdr_nsamples(hdr);
 	    if(has_line)
 	    {
-		int nval = 2*ntmp;
+		int nval = 2*num_samples_in_this_reader;
 		int ngt_read = bcf_get_genotypes(hdr, line[i], &gt, &nval);
-		if(ngt_read!=(2*ntmp) && ngt_read!=ntmp)
+		if(ngt_read!=(2*num_samples_in_this_reader) && ngt_read!=num_samples_in_this_reader)
 		    die("incorrect ploidy at "+to_string(static_cast<long long>(line[i]->pos+1))+" ngt_read="+to_string(static_cast<long long>(ngt_read)));
 
-		if(ngt_read==ntmp) //this is a hack to deal with sites where everyone has been made haploid.
+		if(ngt_read==num_samples_in_this_reader) //this is a hack to deal with sites where everyone has been made haploid.
 		{
-		    int *work =  new int[ntmp];
+		    int *work =  new int[num_samples_in_this_reader];
 		    //	  cerr << "WARNING: position "<< line[i]->pos+1 <<" had an all-haploid site, this can be caused by gvcf hemizygous rules"<<endl;
-		    for(int j=0;j<ntmp;j++)  
+		    for(int j=0;j<num_samples_in_this_reader;j++)  
 			work[j]=gt[j];
-		    for(int j=0;j<ntmp;j++)
+		    for(int j=0;j<num_samples_in_this_reader;j++)
 		    {
 			if(work[j]!=bcf_gt_missing)
 			{
@@ -472,7 +472,7 @@ int aggReader::next()
 
 		bcf_get_format_int32(hdr, line[i], "AD", &ad, &nval);
 
-		nval=ntmp;
+		nval=num_samples_in_this_reader;
 		bcf_get_format_int32(hdr, line[i], "DPF", &dpf, &nval);
 		bcf_get_format_int32(hdr, line[i], "DP", &dp1, &nval);
 		bcf_get_format_int32(hdr, line[i], "GQ", &gq1, &nval);
@@ -486,13 +486,15 @@ int aggReader::next()
 		out_line->rid = line[i]->rid;
 		out_line->pos = line[i]->pos;
 		out_line->qual += line[i]->qual ;
-	    }
+	    }//	    if(has_line)
 
-	    for(int j=0;j<ntmp;j++)
+	    for(int j=0;j<num_samples_in_this_reader;j++)
 	    {
 		if(!has_line || (gt[j*2]==bcf_gt_missing && gt[j*2+1]==bcf_gt_missing) )  //missing vcf entry. fill from dp_buf
-		{
+		{		    
 		    dp1[j]=_out_dp[j+offset];
+		    ad[j*2] = dp1[j];
+		    ad[j*2+1] = 0;
 		    gq1[j]=_out_gq[j+offset];
 		    if(gq1[j]>0||dp1[j]>0)
 		    {
@@ -512,12 +514,15 @@ int aggReader::next()
 
 		//fixes the sporadic hemizgyotes
 		if((bcf_gt_is_missing(gt[j*2])||gt[j*2]==bcf_int32_vector_end) && !bcf_gt_is_missing(gt[j*2+1]))
+		{
 		    gt[j*2]=bcf_gt_unphased(0);
+		}
 		if((bcf_gt_is_missing(gt[j*2+1])||gt[j*2+1]==bcf_int32_vector_end) && !bcf_gt_is_missing(gt[j*2]))
+		{
 		    gt[j*2+1]=bcf_gt_unphased(0);
-
+		}
 	    }
-	    offset+=ntmp;
+	    offset+=num_samples_in_this_reader;
 	}
 
 
