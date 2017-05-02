@@ -12,7 +12,9 @@ static void remove_hdr_lines(bcf_hdr_t *hdr, int type)
         {
             // everything except FORMAT/GT
             int id = bcf_hrec_find_key(hrec, "ID");
-            if ( id>=0 && !strcmp(hrec->vals[id],"GT") ) { i++; continue; }
+            if ( id>=0 && !strcmp(hrec->vals[id],"GT") ) {
+		i++; continue;
+	    }
         }
         nrm++;
         hdr->nhrec--;
@@ -96,22 +98,24 @@ public:
     int flush(int pos,htsFile *outf,bcf_hdr_t *hdr_out) {
 	int n = 0;
 	while(_buf.size()>0 && (pos - _buf.front()->pos) > _w ) {
-	    //      cerr << _last_pos<<"<="<<_buf.front()->pos<<endl;
-	    assert(_last_pos<=_buf.front()->pos);
-	    if(   _last_pos!=_buf.front()->pos )  
+	    bcf1_t *rec = _buf.front();	    
+	    //      cerr << _last_pos<<"<="<<rec->pos<<endl;
+	    assert(_last_pos<=rec->pos);
+	    if(   _last_pos!=rec->pos )  
 		_seen.clear();
 
-	    string variant=(string)_buf.front()->d.allele[0] +"."+ (string)_buf.front()->d.allele[1];
+	    string variant=(string)rec->d.allele[0] +"."+ (string)rec->d.allele[1];
 
 	    if(_seen.count(variant)) {
 		_ndup++;
 	    }
 	    else {
 		_seen.insert(variant);
-		bcf_write1(outf, hdr_out, _buf.front());
+////		cerr << rec->rid<<":"<<rec->pos+1<<":"<<rec->d.allele[0]<<":"<<rec->d.allele[1]<<endl;
+		bcf_write1(outf, hdr_out, rec);
 	    }
-	    _last_pos=_buf.front()->pos;
-	    bcf_destroy1(      _buf.front() );
+	    _last_pos=rec->pos;
+	    bcf_destroy1(rec);
 	    _buf.pop_front();
 	    n++;
 	}    
@@ -158,6 +162,7 @@ int decompose(bcf1_t *rec,bcf_hdr_t *hdr,VarBuffer & buf) {
 		new_var->pos+=i;
 		bcf_update_alleles_str(hdr, new_var, alleles);	
 		buf.push_back(new_var);
+		bcf_destroy1(new_var);		
 		n++;
 	    }
 	}
@@ -302,7 +307,8 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
 		if(gzwrite(depth_fp,buf,5*sizeof(int))!=(5*sizeof(int)))
 		    die("ERROR: problem writing "+(string)out_fname+".tmp");
 	    }
-	    if(is_variant) {//wass this a variant? if so write it out to the bcf
+	    if(is_variant)
+	    {//wass this a variant? if so write it out to the bcf
 		norm_args->ntotal++;
 		vcf_parse(&str,hdr_in,bcf_rec);
 		//	cerr<<bcf_rec->rid<<":"<<bcf_rec->pos<<endl;
@@ -314,7 +320,8 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
 		int32_t pass = bcf_has_filter(hdr_in, bcf_rec, ".");
 		bcf_update_format_int32(hdr_out,bcf_rec,"PF",&pass,1);
 		bcf_update_filter(hdr_out,bcf_rec,NULL,0);
-		if(bcf_rec->n_allele>2) {//split multi-allelics (using vcfnorm.c from bcftools1.3
+		if(bcf_rec->n_allele>2)
+		{//split multi-allelics (using vcfnorm.c from bcftools1.3
 		    norm_args->nsplit++;
 		    split_multiallelic_to_biallelics(norm_args,bcf_rec );
 		    for(int i=0;i<norm_args->ntmp_lines;i++){
