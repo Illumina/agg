@@ -55,17 +55,17 @@ if __name__ == "__main__":
     vds = vds.set_va_attributes('va.filters', {'AC0': 'no alternate genotypes passed per-genotype hard filters','LCR': 'variant falls in a low-complexity region','InbreedingCoeff': 'inbreeding coefficient < -0.3 (excessive heterozygosity)','HIGHDP': 'alternate genotypes have excessively high depth','LOWGQ': 'the median GQ at alternate genotypes was <20','LOWCALL':'<0.9 genotypes had a high quality genotype call'})
     
     vds.write(args.vds)   
-    print(vds.variant_schema)
+#    print(vds.variant_schema)
     
     if args.vcf:
-        vds.export_vcf(args.outputvcf+"vcf.bgz",parallel=True)
+        vds.export_vcf(args.vds+"vcf.bgz",parallel=True)
     raw_counts= vds.count()
 
     vds_pass = vds.filter_variants_expr('va.pass').sample_qc()
     pass_counts = vds_pass.count()    
 
     ## some simply summaries of variants (I think this is inefficient)
-    s = vds.samples_keytable().to_pandas()
+    s = vds_pass.samples_keytable().to_pandas()
     print "\n\nSample QC (PASS variants):\n"
     tab = pd.DataFrame({'nSNP':s['sa.qc.nSNP'].describe(),'TiTv':s['sa.qc.rTiTv'].describe(),'nIndel':(s['sa.qc.nInsertion']+s['sa.qc.nDeletion']).describe(),"nSingleton":s['sa.qc.nSingleton'].describe()}).round(2)
     print tab.ix[[1,3,4,5,6,7]]
