@@ -1,3 +1,8 @@
+2016-05-03
+*switched to htslib-1.4
+*fixed a small memory leak in agg ingest1
+*FORMAT/AD field will now be populated for homozygous reference sites
+
 2016-01-16
 *make will now compile plugins
 
