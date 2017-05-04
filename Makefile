@@ -5,7 +5,7 @@ all: agg plugins
 
 CFLAGS = -O2  $(ALLFLAGS) 
 
-debug: CFLAGS =  -pg -g -Wall $(ALLFLAGS) 
+debug: CFLAGS =  -O0 -pg -g -Wall $(ALLFLAGS) 
 debug: all 
 
 #linker stuff

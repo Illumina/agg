@@ -1,3 +1,7 @@
+2016-05-04
+*added more sophisticated decomposition routine for complex substitutions (take from vt)
+*variant ID field is now stripped when importing samples
+
 2016-05-03
 *switched to htslib-1.4
 *fixed a small memory leak in agg ingest1

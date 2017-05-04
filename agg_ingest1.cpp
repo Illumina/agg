@@ -92,15 +92,12 @@ public:
     }
     //add a new variant (and sort if necessary)
     int push_back(bcf1_t *v) {
-	bcf_unpack(v, BCF_UN_ALL);
-	bcf1_t *tmp=bcf_dup(v);
-	bcf_unpack(tmp, BCF_UN_ALL);
-	_buf.push_back(tmp);
+	_buf.push_back(v);
 	int i = _buf.size()-1;
 	while(i>0 && _buf[i]->pos < _buf[i-1]->pos) {
-	    tmp=_buf[i-1];
+	    v=_buf[i-1];
 	    _buf[i-1]=_buf[i];
-	    _buf[i]=tmp;
+	    _buf[i]=v;
 	    i--;
 	}
 	return(1);
@@ -113,17 +110,18 @@ public:
 	    bcf1_t *rec = _buf.front();	    
 	    //      cerr << _last_pos<<"<="<<rec->pos<<endl;
 	    assert(_last_pos<=rec->pos);
-	    if(   _last_pos!=rec->pos )  
-		_seen.clear();
+	    if(   _last_pos!=rec->pos )
+	    {
+		_seen.clear();		
+	    }	
 
 	    string variant=(string)rec->d.allele[0] +"."+ (string)rec->d.allele[1];
-
 	    if(_seen.count(variant)) {
 		_ndup++;
 	    }
 	    else {
 		_seen.insert(variant);
-////		cerr << rec->rid<<":"<<rec->pos+1<<":"<<rec->d.allele[0]<<":"<<rec->d.allele[1]<<endl;
+//		cerr << rec->rid<<":"<<rec->pos+1<<":"<<rec->d.allele[0]<<":"<<rec->d.allele[1]<<endl;
 		bcf_write1(outf, hdr_out, rec);
 	    }
 	    _last_pos=rec->pos;
@@ -170,14 +168,12 @@ struct Triple
 
 //this is a (slightly) modfified version of vt's aggressive decompose 
 //see https://github.com/atks/vt
-int vt_aggressive_decompose(bcf1_t *v,bcf_hdr_t *hdr,VarBuffer & buf)
+int vt_aggressive_decompose(bcf1_t *v,bcf_hdr_t *hdr,vector<bcf1_t *> & buf)
 {
 
-    int32_t n_allele = bcf_get_n_allele(v);
+
     char** allele = bcf_get_allele(v);
 
-    size_t ref_len = strlen(allele[0]);
-    size_t alt_len = n_allele==1 ? 0 : strlen(allele[1]);
 
     int new_no_variants=0;
     kstring_t new_alleles= {0,0,0};
@@ -233,11 +229,8 @@ int vt_aggressive_decompose(bcf1_t *v,bcf_hdr_t *hdr,VarBuffer & buf)
     if (hasError)
 	chunks.push_back(nextChunk);
 
-    // Build new BCF records.
-    int32_t rid = bcf_get_rid(v);
-    int32_t pos1 = bcf_get_pos1(v);
-//    char** allele = bcf_get_allele(v); 
 
+    int32_t pos1 = bcf_get_pos1(v);
     char* ref = strdup(v->d.allele[0]);
     char* alt = strdup(v->d.allele[1]);
 
@@ -250,7 +243,7 @@ int vt_aggressive_decompose(bcf1_t *v,bcf_hdr_t *hdr,VarBuffer & buf)
 	bcf_unpack(nv, BCF_UN_ALL);
 	bcf_set_pos1(nv, pos1+chunks[i].pos_ref);
 	std::vector<int32_t> start_pos_of_phased_block;
-	int32_t no_samples = bcf_get_n_sample(v);
+
                         
 	new_alleles.l=0;
 	for (int j=chunks[i].pos_ref; j<chunks[i].pos_ref+chunks[i].len_ref; ++j)
@@ -267,6 +260,10 @@ int vt_aggressive_decompose(bcf1_t *v,bcf_hdr_t *hdr,VarBuffer & buf)
 
 	++new_no_variants;
     }
+    if(new_alleles.l)
+    {
+	free(new_alleles.s);
+    }
 
     free(ref);
     free(alt);
@@ -277,14 +274,14 @@ int vt_aggressive_decompose(bcf1_t *v,bcf_hdr_t *hdr,VarBuffer & buf)
 
 //1. decompose MNPs/complex substitutions 
 //2. normalises the output using bcftools norm algorithm
-int atomise(bcf1_t *rec,bcf_hdr_t *hdr,VarBuffer & buf,Counts & counts)
+vector<bcf1_t *> atomise(bcf1_t *rec,bcf_hdr_t *hdr,Counts & counts)
 {
     assert(rec->n_allele  == 2);
     char *ref=rec->d.allele[0];
     char *alt=rec->d.allele[1];
     int ref_len = strlen(ref);
     int alt_len = strlen(alt);
-    int n=0;
+    vector<bcf1_t *> ret;
     if(ref_len>1 && ref_len==alt_len) //is MNP
     {
 	char alleles[4] = "X,X";
@@ -298,23 +295,23 @@ int atomise(bcf1_t *rec,bcf_hdr_t *hdr,VarBuffer & buf,Counts & counts)
 		alleles[2]=alt[i];
 		new_var->pos+=i;
 		bcf_update_alleles_str(hdr, new_var, alleles);	
-		buf.push_back(new_var);
-		bcf_destroy1(new_var);		
-		n++;
+		ret.push_back(new_var);
 		counts.mnp++;
 	    }
 	}
     }
     else if((ref_len!=alt_len) && (ref_len!=1) && (alt_len>1)) //complex substitution
     {
-	n=vt_aggressive_decompose(rec,hdr,buf)	;
-	counts.complex+=n;
+	vt_aggressive_decompose(rec,hdr,ret);
+	counts.complex++;
     }
     else //variant already is atomic
     {
-	buf.push_back(rec);    
+	bcf1_t *new_var = bcf_dup(rec);
+	bcf_unpack(new_var, BCF_UN_ALL);
+	ret.push_back(new_var);
     }  
-    return(n);
+    return(ret);
 }
 
 int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch=true) 
@@ -391,7 +388,7 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
     kstring_t work1 = {0,0,0};            
     int buf[5];
     ks_tokaux_t aux;
-    int ndec=0;
+
     int ref_len,alt_len;
     while(    ks_getuntil(ks, '\n', &str, 0) >=0) {
 	//    fprintf(stderr,"%s\n",str.s);
@@ -443,16 +440,16 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
 		assert(GQX_ptr!=NULL);
 	
 		//trying to reduce entropy on GQ to get better compression performance.
-		//1. rounds down to nearest 10. 
-		//2. sets gq to min(gq,100). 
 		buf[4]=atoi(GQX_ptr)/10;
 		buf[4]*=10;
-//		if(buf[4]>100) buf[4]=100;
+
 #ifdef DEBUG
 		fprintf(stderr,"%d\t%d\t%d\t%d\t%d\n",buf[0],buf[1],buf[2],buf[3],buf[4]);
 #endif 
 		if(gzwrite(depth_fp,buf,5*sizeof(int))!=(5*sizeof(int)))
-		    die("ERROR: problem writing "+(string)out_fname+".tmp");
+		{
+		    die("ERROR: problem writing "+(string)out_fname+".tmp");		    
+		}
 	    }
 	    if(is_variant)
 	    {//wass this a variant? if so write it out to the bcf
@@ -465,12 +462,13 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
 		}		 
 		else
 		{
-		    vbuf.flush(bcf_rec->pos,variant_fp,hdr_out);		    
+		    vbuf.flush(bcf_rec->pos,variant_fp,hdr_out);
 		}		    
 		prev_rid=bcf_rec->rid;
 		int32_t pass = bcf_has_filter(hdr_in, bcf_rec, ".");
 		bcf_update_format_int32(hdr_out,bcf_rec,"PF",&pass,1);
 		bcf_update_filter(hdr_out,bcf_rec,NULL,0);
+		bcf_update_id(hdr_out,bcf_rec,NULL);
 		bcf1_t **split_records=&bcf_rec;
 		int num_split_records=1;
 		if(bcf_rec->n_allele>2)
@@ -480,11 +478,12 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
 		    split_records=norm_args->tmp_lines;
 		    num_split_records=norm_args->ntmp_lines;
 		}
+		
 		for(int i=0;i<num_split_records;i++)
 		{
 		    remove_info(split_records[i]);
 		    vector<bcf1_t *> atomised_variants = atomise(split_records[i],hdr_out,counts);
-		    for(size_t j=0;j<atomised_variants.size(),j++)
+		    for(size_t j=0;j<atomised_variants.size();j++)
 		    {
 			if(realign(norm_args,atomised_variants[j]) == ERR_REF_MISMATCH)
 			{
@@ -498,7 +497,8 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
 			    }			    
 			}
 			vbuf.push_back(atomised_variants[j]);
-		    }
+//			bcf_destroy1(atomised_variants[j]);
+		    }		    
 		}
 		vbuf.flush(bcf_rec->pos,variant_fp,hdr_out);
 	    }
@@ -514,10 +514,13 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
     free(str.s);
     free(work1.s);
     hts_close(variant_fp);
-    destroy_data(norm_args);
+
     fprintf(stderr,"Variant lines   total/split/realigned/skipped:\t%d/%d/%d/%d\n", norm_args->ntotal,norm_args->nsplit,norm_args->nchanged,norm_args->nskipped);
     fprintf(stderr,"Decomposed %d MNPs\n", counts.mnp);
     fprintf(stderr,"Decomposed %d complex substitutions\n", counts.complex);
+    
+    destroy_data(norm_args);
+    free(norm_args);
 
 
     fprintf(stderr,"Indexing %s\n",out_fname);
