@@ -53,6 +53,8 @@ agg_ingest2.o: agg_ingest2.cpp agg.h
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $<  
 agg_ingest1.o: agg_ingest1.cpp agg_ingest1.h agg.h version.h
 	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $<
+needle.o: needle.cpp needle.h
+	$(CXX) $(CFLAGS) $(CXX_FLAGS) -c $<
 ##these files were taken from bcftools hence compiled as straight C
 filter.o: filter.c 
 	$(CC) $(CFLAGS) -c $<  
@@ -67,8 +69,8 @@ vcmp.o: vcmp.c
 regidx.o: regidx.c
 	$(CC) $(CFLAGS) -c $<  
 ##binary
-agg: agg.cpp  agg_anno.o depthMerger.o vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.o filter.o regidx.o version.h  $(HTSLIB)
-	$(CXX) $(CFLAGS)  -o agg agg.cpp regidx.o vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o depthMerger.o version.o agg_anno.o filter.o $(HTSLIB) $(LFLAGS) 
+agg: agg.cpp  agg_anno.o depthMerger.o vcfnorm.o vcmp.o vcfmerge.o  agg_ingest2.o utils.o agg_utils.o agg_genotyper.o  agg_ingest1.o version.o filter.o regidx.o needle.o version.h  $(HTSLIB)
+	$(CXX) $(CFLAGS)  -o agg agg.cpp regidx.o vcfnorm.o vcmp.o vcfmerge.o agg_ingest2.o agg_genotyper.o utils.o agg_utils.o  agg_ingest1.o depthMerger.o version.o agg_anno.o filter.o needle.o $(HTSLIB) $(LFLAGS) 
 test: agg
 	cd test/;bash -e test.sh 
 

@@ -71,7 +71,6 @@ bcf1_t *update_info_fields(bcf1_t *rec,bcf_hdr_t *_in_hdr, bcf_hdr_t *_out_hdr)
 	exit(1);
     }
     int nval=bcf_get_format_int32(_in_hdr, rec, "DP", &f_dp, &ndp);
-    assert(nval==n);
     assert(bcf_get_format_int32(_in_hdr, rec, "AD", &f_ad, &nad)>0);
     int has_pf = bcf_get_format_int32(_in_hdr, rec, "PF", &f_pf, &npf)>0;
     int has_dpf =bcf_get_format_int32(_in_hdr, rec, "DPF", &f_dpf, &ndp)==n;

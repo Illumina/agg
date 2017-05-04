@@ -7,6 +7,8 @@
 #include <locale>         // std::locale, std::toupper
 #include <algorithm>
 #include <iostream>
+#include "needle.h"
+#include "hts_utils.h"
 
 KSTREAM_INIT(gzFile, gzread, 16384)
 
