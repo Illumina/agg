@@ -125,7 +125,7 @@ int merge_main(int argc,char **argv) {
   main_vcfmerge(vcfmerge_argc, vcfmerge_argv);  
   output_bcf=(char *)malloc(strlen(output)+5);  strcat(strcpy(output_bcf,output),".bcf");
   cerr << "Indexing " <<output_bcf<<endl;
-  bcf_index_build(output_bcf, BCF_LIDX_SHIFT);
+  bcf_index_build3(output_bcf,NULL, BCF_LIDX_SHIFT,n_threads);
 
   ///build the depth tract - custom agg code
   char *dp_out_fname=(char *)malloc(strlen(output)+5);
@@ -134,7 +134,6 @@ int merge_main(int argc,char **argv) {
   d.setThreads(n_threads);
   d.writeDepthMatrix(dp_out_fname);
   cerr << "Indexing " <<dp_out_fname<<endl;
-  bcf_index_build(dp_out_fname, BCF_LIDX_SHIFT);
-
+  bcf_index_build3(dp_out_fname,NULL, BCF_LIDX_SHIFT,n_threads);
   return(0);
 }
