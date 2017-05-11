@@ -105,7 +105,7 @@ int merge_main(int argc,char **argv) {
   vcfmerge_argv[vcfmerge_argc++]="-";
   vcfmerge_argv[vcfmerge_argc++]="--threads";
   vcfmerge_argv[vcfmerge_argc]=new char[10];
-  snprintf(vcfmerge_argv[vcfmerge_argc++], 10, "%d", n_threads);
+  snprintf(vcfmerge_argv[vcfmerge_argc++], 10, "%d", min(2,n_threads));//limit the number of threads to 2 here. >2 does not seem to improve speed
 
   for(size_t i=0;i<file_list.size();i++)
   {
