@@ -296,8 +296,8 @@ vector<bcf1_t *> atomise(bcf1_t *rec,bcf_hdr_t *hdr,Counts & counts)
 		new_var->pos+=i;
 		bcf_update_alleles_str(hdr, new_var, alleles);	
 		ret.push_back(new_var);
-		counts.mnp++;
 	    }
+	    counts.mnp++;	    
 	}
     }
     else if((ref_len!=alt_len) && (ref_len!=1) && (alt_len>1)) //complex substitution

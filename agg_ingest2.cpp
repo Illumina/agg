@@ -114,11 +114,11 @@ int merge_main(int argc,char **argv) {
       vcfmerge_argc++;
   }
 
-  // cerr<<"bcftools merge argv: ";
-  // for(int i=0;i<vcfmerge_argc;i++)
-  // {
-  //     cerr<<" "<< vcfmerge_argv[i];
-  // }
+  cerr<<"bcftools merge argv: ";
+  for(int i=0;i<vcfmerge_argc;i++)
+  {
+      cerr<<" "<< vcfmerge_argv[i];
+  }
 
   cerr<<endl;
   optind=0;//reset getopt
