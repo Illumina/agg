@@ -9,7 +9,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='hail script to apply a simple set of hard filters')
     parser.add_argument('-files', metavar='files', type=str, help='file containing list of vcfs to import',required=True)
     parser.add_argument('-vds', metavar='vds', type=str, help='vds prefix',required=True)
-    parser.add_argument('-lcr', metavar='lcr', type=str, help='bed file containing the low-complexity regions to filter',required=True)    
+    parser.add_argument('-lcr', metavar='lcr', type=str, help='bed file containing the low-complexity regions to filter',default=None)
     parser.add_argument('-tmp', metavar='tmp', type=str, help='tmp directory',default="/tmp/")
     parser.add_argument('-rename', metavar='rename', type=str, help='two column text file for sample renaming',default=None)
     parser.add_argument('--vcf',action='store_true',default=False,help='output a big vcf')
@@ -25,18 +25,23 @@ if __name__ == "__main__":
     hc = hail.HailContext(log="hail.log",quiet=True,tmp_dir=args.tmp)
 
     time0 = time.time()
-    vds=hc.import_vcf(open(args.files).read().strip().split(),force_bgz=True,store_gq=True).split_multi().variant_qc().annotate_variants_bed(args.lcr,'va.lowComplexityRegion').annotate_variants_expr(['va.filters = [""][:0].toSet()',"va.info.AC_raw = va.qc.AC"]).annotate_variants_expr('va.ft.alt_gq_median = gs.filter(g=>g.isCalledNonRef).map(g=>g.gq).collect().median()')
+    vds=hc.import_vcf(open(args.files).read().strip().split(),force_bgz=True,store_gq=True).split_multi().variant_qc()
+    vds=vds.annotate_variants_expr(['va.filters = [""][:0].toSet()',"va.info.AC_raw = va.qc.AC"]).annotate_variants_expr('va.ft.alt_gq_median = gs.filter(g=>g.isCalledNonRef).map(g=>g.gq).collect().median()')
     print "VCF conversion took",time.time()-time0,"seconds"
 
+    if args.lcr!=None:
+        vds=vds.annotate_variants_bed(args.lcr,'va.lowComplexityRegion')
+        vds=vds.annotate_variants_expr('va.filters = if(va.lowComplexityRegion) va.filters.add("LCR") else va.filters')
+        
     if args.rename!=None:
         sample_rename = dict([val.strip().split() for val in open(args.rename)])
         vds = vds.rename_samples(sample_rename)
+
 
     vds=vds.filter_genotypes("g.gq>=20 && g.dp>=10 && (!g.isHet() || (g.ad[1]/g.ad.sum())>=0.2) ").variant_qc().annotate_variants_expr(["va.info.InbreedingCoeff = if(va.qc.AC>0) (1-va.qc.nHet/(va.qc.nCalled*2*va.qc.AF*(1-va.qc.AF))) else 0.0","va.info.AC = va.qc.AC","va.info.AF = va.qc.AF"])
 
     filter_expressions = ['va.filters = if(!isMissing(va.info.InbreedingCoeff) && va.info.InbreedingCoeff < -0.3) va.filters.add("InbreedingCoeff") else va.filters',
                           'va.filters = if(va.info.AC == 0) va.filters.add("AC0") else va.filters',
-                          'va.filters = if(va.lowComplexityRegion) va.filters.add("LCR") else va.filters',
                           'va.filters = if(!isMissing(va.ft.alt_gq_median) && va.ft.alt_gq_median<20) va.filters.add("LOWGQ") else va.filters',
                           'va.filters = if(va.qc.nCalled<0.9) va.filters.add("LOWCALL") else va.filters']
 
