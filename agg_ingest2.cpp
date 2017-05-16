@@ -105,7 +105,7 @@ int merge_main(int argc,char **argv) {
   vcfmerge_argv[vcfmerge_argc++]="-";
   vcfmerge_argv[vcfmerge_argc++]="--threads";
   vcfmerge_argv[vcfmerge_argc]=new char[10];
-  snprintf(vcfmerge_argv[vcfmerge_argc++], 10, "%d", n_threads);
+  snprintf(vcfmerge_argv[vcfmerge_argc++], 10, "%d", min(2,n_threads));//limit the number of threads to 2 here. >2 does not seem to improve speed
 
   for(size_t i=0;i<file_list.size();i++)
   {
@@ -114,18 +114,18 @@ int merge_main(int argc,char **argv) {
       vcfmerge_argc++;
   }
 
-  // cerr<<"bcftools merge argv: ";
-  // for(int i=0;i<vcfmerge_argc;i++)
-  // {
-  //     cerr<<" "<< vcfmerge_argv[i];
-  // }
+  cerr<<"bcftools merge argv: ";
+  for(int i=0;i<vcfmerge_argc;i++)
+  {
+      cerr<<" "<< vcfmerge_argv[i];
+  }
 
   cerr<<endl;
   optind=0;//reset getopt
   main_vcfmerge(vcfmerge_argc, vcfmerge_argv);  
   output_bcf=(char *)malloc(strlen(output)+5);  strcat(strcpy(output_bcf,output),".bcf");
   cerr << "Indexing " <<output_bcf<<endl;
-  bcf_index_build(output_bcf, BCF_LIDX_SHIFT);
+  bcf_index_build3(output_bcf,NULL, BCF_LIDX_SHIFT,n_threads);
 
   ///build the depth tract - custom agg code
   char *dp_out_fname=(char *)malloc(strlen(output)+5);
@@ -134,7 +134,6 @@ int merge_main(int argc,char **argv) {
   d.setThreads(n_threads);
   d.writeDepthMatrix(dp_out_fname);
   cerr << "Indexing " <<dp_out_fname<<endl;
-  bcf_index_build(dp_out_fname, BCF_LIDX_SHIFT);
-
+  bcf_index_build3(dp_out_fname,NULL, BCF_LIDX_SHIFT,n_threads);
   return(0);
 }
