@@ -1,6 +1,6 @@
 agg: a utility for aggregating Illumina-style GVCFs. This software is not commercially supported.
 
-Copyright (c) 2016, Illumina, Inc. All rights reserved. 
+Copyright (c) 2017, Illumina, Inc. All rights reserved. 
 
 The agg source code is provided under the [GPLv3 license](LICENSE).
 
@@ -33,7 +33,7 @@ make
 ./agg
 ```
 
-It should be noted that parts of the agg source code were taken directly from the excellent [bcftools](https://github.com/samtools/bcftools) which is licensed permissively under BSD.
+It should be noted that parts of the agg source code were taken directly from the excellent [bcftools](https://github.com/samtools/bcftools) and [vt](https://github.com/atks/vt) both of which are permissively licensed under BSD/MIT.
 
 ### Building an agg chunk
 The input to agg's genotyping routine is one or more agg "chunks".  As new batches of samples arrive they can be rolled into a new chunk, without the need to modify previous chunks containing older samples. 
@@ -128,7 +128,7 @@ chrQ      100     G    C,<M>    1/2
 ```
 implementing the correct behaviour is complicated by the fact one of the variants may be non-passing. We face a similar issue with deletions that overlap downstream variants.
 
-We decompose MNPs and perform basic left-shifting/trimming of indels (taken from `bcftools norm` implementation). We currently do not decompose complex indels.
+We decompose MNPs and perform basic left-shifting/trimming of indels (taken from `bcftools norm` implementation). We apply the complex substitution decomposition routine implemented in [vt](http://genome.sph.umich.edu/wiki/Vt), but as noted on their webpage, their is no unique solution for this problem.
 
 All sites are currently treated as diploid, this is obviously wrong for male chrX, chrY and chrM.  This can be fixed via [post-hoc processing](https://github.com/Illumina/agg/issues/1).
 
