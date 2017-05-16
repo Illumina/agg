@@ -20,7 +20,7 @@ CXX_FLAGS = -std=c++0x -Wno-write-strings
 
 GIT_HASH := $(shell git describe --abbrev=4 --always )
 BCFTOOLS_VERSION=1.4
-VERSION = 0.3.5
+VERSION = 0.3.6
 ifneq "$(wildcard .git)" ""
 VERSION = $(shell git describe --always)
 endif
