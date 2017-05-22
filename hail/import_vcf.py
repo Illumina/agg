@@ -49,14 +49,14 @@ if __name__ == "__main__":
         vds=vds.annotate_variants_expr(e)
 #    vds=vds.annotate_variants_expr(filter_expressions) ##this does not work (i think because the expressions are modifying the same field)
 
-    vds=vds.annotate_variants_expr('va.pass = va.filters.isEmpty()').persist()
+    vds=vds.annotate_variants_expr('va.pass = va.filters.isEmpty()')
 
     ##sets up a simple max depth filter
     sample_expressions=['sa.altDepthStats = gs.filter(g => g.isCalledNonRef() && g.dp<1000 && va.pass).map(g=>g.dp).stats()']
     vds=vds.annotate_samples_expr(sample_expressions)
     vds=vds.annotate_variants_expr('va.ft.alt_dp_mean = gs.filter(g=>g.isCalledNonRef).map(g=>(g.dp-sa.altDepthStats.mean)/sa.altDepthStats.stdev).stats().mean')
     vds=vds.annotate_variants_expr('va.filters = if(!isMissing(va.ft.alt_dp_mean) && va.ft.alt_dp_mean>%f) va.filters.add("HIGHDP") else va.filters'%MAXDEPTH)
-    vds=vds.annotate_variants_expr('va.pass = va.filters.isEmpty()').persist()                       
+    vds=vds.annotate_variants_expr('va.pass = va.filters.isEmpty()')
     vds = vds.set_va_attributes('va.filters', {'AC0': 'no alternate genotypes passed per-genotype hard filters','LCR': 'variant falls in a low-complexity region','InbreedingCoeff': 'inbreeding coefficient < -0.3 (excessive heterozygosity)','HIGHDP': 'alternate genotypes have excessively high depth','LOWGQ': 'the median GQ at alternate genotypes was <20','LOWCALL':'<0.9 genotypes had a high quality genotype call'})
     
     vds.write(args.vds)   
