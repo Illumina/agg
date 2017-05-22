@@ -1,4 +1,3 @@
-
 import argparse,time,sys
 import pandas as pd, numpy as np
 
@@ -30,9 +29,10 @@ if __name__ == "__main__":
     print "VCF conversion took",time.time()-time0,"seconds"
 
     if args.lcr!=None:
-        vds=vds.annotate_variants_bed(args.lcr,'va.lowComplexityRegion')
-        vds=vds.annotate_variants_expr('va.filters = if(va.lowComplexityRegion) va.filters.add("LCR") else va.filters')
-        
+        time0 = time.time()
+        vds = vds.annotate_variants_table(hail.KeyTable.import_bed(args.lcr), root='va.lowComplexityRegion').annotate_variants_expr('va.filters = if(va.lowComplexityRegion) va.filters.add("LCR") else va.filters')
+        print "LCR annotation took",time.time()-time0,"seconds"                                      
+
     if args.rename!=None:
         sample_rename = dict([val.strip().split() for val in open(args.rename)])
         vds = vds.rename_samples(sample_rename)

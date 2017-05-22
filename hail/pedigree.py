@@ -17,7 +17,8 @@ if __name__ == "__main__":
     print "VDS:",args.vds
     print "Pedigree:",args.pedigree
                         
-    hc = hail.HailContext(log="/dev/null")
+    hc = hail.HailContext(log="hail.log",quiet=True,tmp_dir=args.tmp)
+    
 
     time0 = time.time()
     vds = hc.read(args.vds)
