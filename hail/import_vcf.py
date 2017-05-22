@@ -1,4 +1,4 @@
-import argparse,time,sys
+import argparse,time,sys,os
 import pandas as pd, numpy as np
 
 MAXDEPTH = 4
@@ -20,8 +20,12 @@ if __name__ == "__main__":
     print "VCF:",args.files
     print "VDS:",args.vds
     print "LCR:",args.lcr
-
-    hc = hail.HailContext(log="hail.log",quiet=True,tmp_dir=args.tmp)
+    
+    if os.path.exists(args.vds):
+        print "ERROR: ",args.vds,"exists!"
+        sys.exit()
+            
+    hc = hail.HailContext(log="hail.log",tmp_dir=args.tmp)
 
     time0 = time.time()
     vds=hc.import_vcf(open(args.files).read().strip().split(),force_bgz=True,store_gq=True).split_multi().variant_qc()
@@ -53,31 +57,34 @@ if __name__ == "__main__":
     
     time0 = time.time()        
     ##sets up a simple max depth filter
-    sample_expressions=['sa.altDepthStats = gs.filter(g => g.isCalledNonRef() && g.dp<1000 && va.pass).map(g=>g.dp).stats()']
+    sample_expressions=['sa.altDepthStats = gs.filter(g => va.info.AC>=10 && va.pass && g.isCalledNonRef() && g.dp<1000).map(g=>g.dp).stats()']
     vds=vds.annotate_samples_expr(sample_expressions)
     vds=vds.annotate_variants_expr('va.ft.alt_dp_mean = gs.filter(g=>g.isCalledNonRef).map(g=>(g.dp-sa.altDepthStats.mean)/sa.altDepthStats.stdev).stats().mean')
     vds=vds.annotate_variants_expr('va.filters = if(!isMissing(va.ft.alt_dp_mean) && va.ft.alt_dp_mean>%f) va.filters.add("HIGHDP") else va.filters'%MAXDEPTH)
     vds=vds.annotate_variants_expr('va.pass = va.filters.isEmpty()')
-    vds = vds.set_va_attributes('va.filters', {'AC0': 'no alternate genotypes passed per-genotype hard filters','LCR': 'variant falls in a low-complexity region','InbreedingCoeff': 'inbreeding coefficient < -0.3 (excessive heterozygosity)','HIGHDP': 'alternate genotypes have excessively high depth','LOWGQ': 'the median GQ at alternate genotypes was <20','LOWCALL':'<0.9 genotypes had a high quality genotype call'})
     print "Filter pass two took ",time.time()-time0,"seconds"
 
-#    print(vds.variant_schema)
-    
+    vds = vds.set_va_attributes('va.filters', {'AC0': 'no alternate genotypes passed per-genotype hard filters',
+                                               'LCR': 'variant falls in a low-complexity region',
+                                               'InbreedingCoeff': 'inbreeding coefficient < -0.3 (excessive heterozygosity)',
+                                               'HIGHDP': 'alternate genotypes have excessively high depth',
+                                               'LOWGQ': 'the median GQ at alternate genotypes was <20',
+                                               'LOWCALL':'<0.9 genotypes had a high quality genotype call'})    
+
     time0=   time.time()
     vds.write(args.vds)   
     print "VDS write took",time.time()-time0,"seconds"                                      
+    variantqc_table = vds.variants_table().to_pandas()
 
-    sys.exit()
     if args.vcf:
         vds.export_vcf(args.vds+"vcf.bgz",parallel=True)
     raw_counts= vds.count()
 
     vds_pass = vds.filter_variants_expr('va.pass').sample_qc()
     pass_counts = vds_pass.count()    
-
-  
     ## some simply summaries of variants (I think this is inefficient)
-    s = vds_pass.samples_keytable().to_pandas()
+    s = vds_pass.samples_table().to_pandas()
+    s.to_csv("samples.csv")
     print "\n\nSample QC (PASS variants):\n"
     tab = pd.DataFrame({'nSNP':s['sa.qc.nSNP'].describe(),'TiTv':s['sa.qc.rTiTv'].describe(),'nIndel':(s['sa.qc.nInsertion']+s['sa.qc.nDeletion']).describe(),"nSingleton":s['sa.qc.nSingleton'].describe()}).round(2)
     print tab.ix[[1,3,4,5,6,7]]
