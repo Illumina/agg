@@ -37,7 +37,7 @@ if __name__ == "__main__":
         sample_rename = dict([val.strip().split() for val in open(args.rename)])
         vds = vds.rename_samples(sample_rename)
 
-
+    time0 = time.time()        
     vds=vds.filter_genotypes("g.gq>=20 && g.dp>=10 && (!g.isHet() || (g.ad[1]/g.ad.sum())>=0.2) ").variant_qc().annotate_variants_expr(["va.info.InbreedingCoeff = if(va.qc.AC>0) (1-va.qc.nHet/(va.qc.nCalled*2*va.qc.AF*(1-va.qc.AF))) else 0.0","va.info.AC = va.qc.AC","va.info.AF = va.qc.AF"])
 
     filter_expressions = ['va.filters = if(!isMissing(va.info.InbreedingCoeff) && va.info.InbreedingCoeff < -0.3) va.filters.add("InbreedingCoeff") else va.filters',
@@ -58,9 +58,13 @@ if __name__ == "__main__":
     vds=vds.annotate_variants_expr('va.filters = if(!isMissing(va.ft.alt_dp_mean) && va.ft.alt_dp_mean>%f) va.filters.add("HIGHDP") else va.filters'%MAXDEPTH)
     vds=vds.annotate_variants_expr('va.pass = va.filters.isEmpty()')
     vds = vds.set_va_attributes('va.filters', {'AC0': 'no alternate genotypes passed per-genotype hard filters','LCR': 'variant falls in a low-complexity region','InbreedingCoeff': 'inbreeding coefficient < -0.3 (excessive heterozygosity)','HIGHDP': 'alternate genotypes have excessively high depth','LOWGQ': 'the median GQ at alternate genotypes was <20','LOWCALL':'<0.9 genotypes had a high quality genotype call'})
-    
-    vds.write(args.vds)   
+    print "Filtering took",time.time()-time0,"seconds"                                      
+
 #    print(vds.variant_schema)
+    
+    time0=   time.time()
+    vds.write(args.vds)   
+    print "VDS write took",time.time()-time0,"seconds"                                      
     
     if args.vcf:
         vds.export_vcf(args.vds+"vcf.bgz",parallel=True)
