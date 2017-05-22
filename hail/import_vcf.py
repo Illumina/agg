@@ -48,9 +48,10 @@ if __name__ == "__main__":
     for e in filter_expressions:
         vds=vds.annotate_variants_expr(e)
 #    vds=vds.annotate_variants_expr(filter_expressions) ##this does not work (i think because the expressions are modifying the same field)
-
     vds=vds.annotate_variants_expr('va.pass = va.filters.isEmpty()')
-
+    print "Filter pass one took ",time.time()-time0,"seconds"
+    
+    time0 = time.time()        
     ##sets up a simple max depth filter
     sample_expressions=['sa.altDepthStats = gs.filter(g => g.isCalledNonRef() && g.dp<1000 && va.pass).map(g=>g.dp).stats()']
     vds=vds.annotate_samples_expr(sample_expressions)
@@ -58,14 +59,15 @@ if __name__ == "__main__":
     vds=vds.annotate_variants_expr('va.filters = if(!isMissing(va.ft.alt_dp_mean) && va.ft.alt_dp_mean>%f) va.filters.add("HIGHDP") else va.filters'%MAXDEPTH)
     vds=vds.annotate_variants_expr('va.pass = va.filters.isEmpty()')
     vds = vds.set_va_attributes('va.filters', {'AC0': 'no alternate genotypes passed per-genotype hard filters','LCR': 'variant falls in a low-complexity region','InbreedingCoeff': 'inbreeding coefficient < -0.3 (excessive heterozygosity)','HIGHDP': 'alternate genotypes have excessively high depth','LOWGQ': 'the median GQ at alternate genotypes was <20','LOWCALL':'<0.9 genotypes had a high quality genotype call'})
-    print "Filtering took",time.time()-time0,"seconds"                                      
+    print "Filter pass two took ",time.time()-time0,"seconds"
 
 #    print(vds.variant_schema)
     
     time0=   time.time()
     vds.write(args.vds)   
     print "VDS write took",time.time()-time0,"seconds"                                      
-    
+
+    sys.exit()
     if args.vcf:
         vds.export_vcf(args.vds+"vcf.bgz",parallel=True)
     raw_counts= vds.count()
@@ -73,6 +75,7 @@ if __name__ == "__main__":
     vds_pass = vds.filter_variants_expr('va.pass').sample_qc()
     pass_counts = vds_pass.count()    
 
+  
     ## some simply summaries of variants (I think this is inefficient)
     s = vds_pass.samples_keytable().to_pandas()
     print "\n\nSample QC (PASS variants):\n"
