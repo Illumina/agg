@@ -7,7 +7,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='hail script to perform a few basic pedigree analyses')
     parser.add_argument('-vds', metavar='vds', type=str, help='vds prefix',required=True)
     parser.add_argument('-tmp', metavar='tmp', type=str, help='tmp directory',default="/tmp/")
-parser.add_argument('-pedigree', metavar='pedigree', type=str, help='plink pedigree file (will remove samples not in the file)',required=True)
+    parser.add_argument('-pedigree', metavar='pedigree', type=str, help='plink pedigree file (will remove samples not in the file)',required=True)
     parser.add_argument('-gnomad', metavar='gnomad', type=str, help='gnomad .vds to annotate allele frequencies from')
 
     args = parser.parse_args()
