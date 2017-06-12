@@ -55,22 +55,21 @@ if __name__ == "__main__":
     vds=vds.annotate_variants_expr('va.pass = va.filters.isEmpty()')
     print "Filter pass one took ",time.time()-time0,"seconds"
     
-    time0 = time.time()        
-    ##sets up a simple max depth filter
-    sample_expressions=['sa.altDepthStats = gs.filter(g => va.info.AC>=10 && va.pass && g.isCalledNonRef() && g.dp<1000).map(g=>g.dp).stats()']
-    vds=vds.annotate_samples_expr(sample_expressions)
-    vds=vds.annotate_variants_expr('va.ft.alt_dp_mean = gs.filter(g=>g.isCalledNonRef).map(g=>(g.dp-sa.altDepthStats.mean)/sa.altDepthStats.stdev).stats().mean')
-    vds=vds.annotate_variants_expr('va.filters = if(!isMissing(va.ft.alt_dp_mean) && va.ft.alt_dp_mean>%f) va.filters.add("HIGHDP") else va.filters'%MAXDEPTH)
-    vds=vds.annotate_variants_expr('va.pass = va.filters.isEmpty()')
-    print "Filter pass two took ",time.time()-time0,"seconds"
+    # time0 = time.time()        
+    # ##sets up a simple max depth filter
+    # sample_expressions=['sa.altDepthStats = gs.filter(g => va.info.AC>=10 && va.pass && g.isCalledNonRef() && g.dp<1000).map(g=>g.dp).stats()']
+    # vds=vds.annotate_samples_expr(sample_expressions)
+    # vds=vds.annotate_variants_expr('va.ft.alt_dp_mean = gs.filter(g=>g.isCalledNonRef).map(g=>(g.dp-sa.altDepthStats.mean)/sa.altDepthStats.stdev).stats().mean')
+    # vds=vds.annotate_variants_expr('va.filters = if(!isMissing(va.ft.alt_dp_mean) && va.ft.alt_dp_mean>%f) va.filters.add("HIGHDP") else va.filters'%MAXDEPTH)
+    # print "Filter pass two took ",time.time()-time0,"seconds"
 
     vds = vds.set_va_attributes('va.filters', {'AC0': 'no alternate genotypes passed per-genotype hard filters',
                                                'LCR': 'variant falls in a low-complexity region',
                                                'InbreedingCoeff': 'inbreeding coefficient < -0.3 (excessive heterozygosity)',
                                                'HIGHDP': 'alternate genotypes have excessively high depth',
                                                'LOWGQ': 'the median GQ at alternate genotypes was <20',
-                                               'LOWCALL':'<0.9 genotypes had a high quality genotype call'})    
-
+                                               'LOWCALL':'<0.9 genotypes had a high quality genotype call'})   
+    vds=vds.annotate_variants_expr('va.pass = va.filters.isEmpty()')
     time0=   time.time()
     vds.write(args.vds)   
     print "VDS write took",time.time()-time0,"seconds"                                      
@@ -106,7 +105,6 @@ if __name__ == "__main__":
         'variants.filter(v => v.altAllele().isIndel()).count()',
         'variants.filter(v => v.altAllele().isSNP() && va.pass).count()',
         'variants.filter(v => v.altAllele().isIndel() && va.pass).count()'   ]
-
     
     counts = vds.query_variants(q1 + q2 + q3 + q4)
 

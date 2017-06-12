@@ -6,9 +6,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='hail script to perform a few basic pedigree analyses')
     parser.add_argument('-vds', metavar='vds', type=str, help='vds prefix',required=True)
+    parser.add_argument('-output', metavar='output', type=str, help='output',required=True)
     parser.add_argument('-tmp', metavar='tmp', type=str, help='tmp directory',default="/tmp/")
-parser.add_argument('-pedigree', metavar='pedigree', type=str, help='plink pedigree file (will remove samples not in the file)',required=True)
-    parser.add_argument('-gnomad', metavar='gnomad', type=str, help='gnomad .vds to annotate allele frequencies from')
+    parser.add_argument('-pedigree', metavar='pedigree', type=str, help='plink pedigree file (will remove samples not in the file)',required=True)
 
     args = parser.parse_args()
 
@@ -16,6 +16,10 @@ parser.add_argument('-pedigree', metavar='pedigree', type=str, help='plink pedig
     print "Pedigree:",args.pedigree
                         
     hc = hail.HailContext(log="hail.log",quiet=True,tmp_dir=args.tmp)
+
+    if os.path.exists(args.output):
+        print "ERROR: ",args.output,"exists!"
+        sys.exit()
     
 
     time0 = time.time()
@@ -45,7 +49,8 @@ parser.add_argument('-pedigree', metavar='pedigree', type=str, help='plink pedig
     newped=tmp_dir+"/corrected.fam"
 #    print vds.variant_schema
     vds=vds.tdt(hail.representation.Pedigree.read(newped)).annotate_samples_expr('sa.founder = isMissing(sa.fam.patID) && isMissing(sa.fam.patID)').variant_qc().filter_variants_expr("va.pass && va.qc.AC>0").annotate_variants_expr('va.founder = gs.filter(g => sa.founder).callStats(g => v)')
-                        
+    vds.write(args.output)                        
+    print "VDS written"
     variantqc_table = vds.variants_table().to_pandas()
     variantqc_table.columns = [val.replace(".","_") for val in variantqc_table.columns]
 
