@@ -8,7 +8,7 @@ for i in 1 2;do echo ../make_chunk.py gvcfs${i}.txt -output chunk${i} -ref ref.f
 ../agg genotype -o - -r chr21 chunk1.bcf chunk2.bcf -Ou -@4 | ./bcftools filter -Ou -i 'FMT/DP>=10 & FMT/GQ>=20' -S. | ./bcftools annotate -Ob -x FILTER -o chr21.bcf
 ./bcftools index chr21.bcf
 
-../agg anno chr21.bcf -i 'QUAL>=20'  -Ob -o chr21.anno.bcf
+#../agg anno chr21.bcf -i 'QUAL>=20'  -Ob -o chr21.anno.bcf
 
 ./vcftools --bcf chr21.bcf --diff-bcf omni.bcf  --diff-discordance-matrix
 
