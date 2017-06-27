@@ -390,58 +390,41 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
     ks_tokaux_t aux;
 
     int ref_len,alt_len;
-    while(    ks_getuntil(ks, '\n', &str, 0) >=0) {
-	//    fprintf(stderr,"%s\n",str.s);
-	if(str.s[0]!='#')  {
-	    char *ptr = kstrtok(str.s,"\t",&aux);//chrom
-	    ptr = kstrtok(NULL,NULL,&aux);//pos
-	    work1.l=0;
-	    kputsn(str.s,ptr-str.s-1, &work1);   
-	    buf[0] =  bcf_hdr_name2id(hdr_in, work1.s);
-	    assert(      buf[0]>=0);
-	    buf[1]=atoi(ptr)-1;
-	    ptr = kstrtok(NULL,NULL,&aux);//ID
-	    ptr = kstrtok(NULL,NULL,&aux);//REF
-
-	    ref_len=0;
-	    while(ptr[ref_len]!='\t') ref_len++;
-
-	    ptr = kstrtok(NULL,NULL,&aux);//ALT
-
-	    bool is_variant=false;
-	    alt_len=0;
-	    while(ptr[alt_len]!='\t') alt_len++;
-	    if(ptr[0]!='.') 
-		is_variant=true;
-      
-
-	    for(int i=0;i<3;i++)  ptr = kstrtok(NULL,NULL,&aux);// gets us to INFO
-
-	    //find END if it is there
-	    char *end_ptr=strstr(ptr,"END=") ;
-	    if(end_ptr!=NULL) 
-		buf[2]=atoi(end_ptr+4)-1;
-	    else
-		buf[2]=buf[1]+alt_len-1;
-
-	    ptr  = kstrtok(NULL,NULL,&aux);//FORMAT
-	    //find index of DP (if present)
-	    //if not present, dont output anything (indels ignored)
-      
-	    char *DP_ptr = find_format(ptr,"DP:");
-	    if(DP_ptr!=NULL) 
+    bcf_srs_t *sr =  bcf_sr_init() ; ///htslib synced reader.
+    if(!(bcf_sr_add_reader (sr, input )))
+    {
+	die("problem opening input");
+    }
+    bcf1_t *line;
+    int dp,gq,end;
+    int nval=1;
+    while(bcf_sr_next_line (sr))
+    {
+	line =  bcf_sr_get_line(sr, 0);
+	if(bcf_get_format_int32(sr->readers[0].header, line, "DP", &dp , &nval) == 1)
+	{
+	    buf[0] = line->rid;
+	    buf[1] = line->pos;
+	    int alt_len = strlen(line->d.allele[1]);
+	    if(bcf_get_format_int32(sr->readers[0].header, line, "END", &end , &nval) == 1)
 	    {
-		buf[3]=atoi(DP_ptr);
-		char *GQX_ptr = find_format(ptr,"GQ:");
-		if(GQX_ptr==NULL)
-		{
-		    GQX_ptr = find_format(ptr,"GQX:");
-		}
-		assert(GQX_ptr!=NULL);
-	
-		//trying to reduce entropy on GQ to get better compression performance.
-		buf[4]=atoi(GQX_ptr)/10;
+		buf[2] = end - 1;
+	    }
+	    else
+	    {
+		buf[2] = buf[1]+alt_len-1;
+	    }
+	    buf[3] = dp;
+	    if(bcf_get_format_int32(sr->readers[0].header, line, "GQ", &gq , &nval) == 1)
+	    {
+		buf[4] = gq;
+	    }
+	    else
+	    {
+		assert(bcf_get_format_int32(sr->readers[0].header, line, "GQX", &gq , &nval)==1);
+		buf[4]=gq/10;
 		buf[4]*=10;
+	    }
 
 #ifdef DEBUG
 		fprintf(stderr,"%d\t%d\t%d\t%d\t%d\n",buf[0],buf[1],buf[2],buf[3],buf[4]);
@@ -450,64 +433,64 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
 		{
 		    die("ERROR: problem writing "+(string)out_fname+".tmp");		    
 		}
+	}
+
+	if(line->n_allele>1)
+	{//was this a variant? if so write it out to the bcf
+	    norm_args->ntotal++;
+	    //	cerr<<line->rid<<":"<<line->pos<<endl;
+	    if(prev_rid!=line->rid)
+	    {
+		vbuf.flush(variant_fp,hdr_out);
+	    }		 
+	    else
+	    {
+		vbuf.flush(line->pos,variant_fp,hdr_out);
+	    }		    
+	    prev_rid=line->rid;
+	    int32_t pass = bcf_has_filter(hdr_in, line, ".");
+	    bcf_update_format_int32(hdr_out,line,"PF",&pass,1);
+	    bcf_update_filter(hdr_out,line,NULL,0);
+	    bcf_update_id(hdr_out,line,NULL);
+	    bcf1_t **split_records=&line;
+	    int num_split_records=1;
+	    if(line->n_allele>2)
+	    {//split multi-allelics (using vcfnorm.c from bcftools1.3
+		norm_args->nsplit++;
+		split_multiallelic_to_biallelics(norm_args,line);
+		split_records=norm_args->tmp_lines;
+		num_split_records=norm_args->ntmp_lines;
 	    }
-	    if(is_variant)
-	    {//wass this a variant? if so write it out to the bcf
-		norm_args->ntotal++;
-		vcf_parse(&str,hdr_in,bcf_rec);
-		//	cerr<<bcf_rec->rid<<":"<<bcf_rec->pos<<endl;
-		if(prev_rid!=bcf_rec->rid)
+	    
+	    for(int i=0;i<num_split_records;i++)
+	    {
+		remove_info(split_records[i]);
+		vector<bcf1_t *> atomised_variants = atomise(split_records[i],hdr_out,counts);
+		for(size_t j=0;j<atomised_variants.size();j++)
 		{
-		    vbuf.flush(variant_fp,hdr_out);
-		}		 
-		else
-		{
-		    vbuf.flush(bcf_rec->pos,variant_fp,hdr_out);
-		}		    
-		prev_rid=bcf_rec->rid;
-		int32_t pass = bcf_has_filter(hdr_in, bcf_rec, ".");
-		bcf_update_format_int32(hdr_out,bcf_rec,"PF",&pass,1);
-		bcf_update_filter(hdr_out,bcf_rec,NULL,0);
-		bcf_update_id(hdr_out,bcf_rec,NULL);
-		bcf1_t **split_records=&bcf_rec;
-		int num_split_records=1;
-		if(bcf_rec->n_allele>2)
-		{//split multi-allelics (using vcfnorm.c from bcftools1.3
-		    norm_args->nsplit++;
-		    split_multiallelic_to_biallelics(norm_args,bcf_rec);
-		    split_records=norm_args->tmp_lines;
-		    num_split_records=norm_args->ntmp_lines;
-		}
-		
-		for(int i=0;i<num_split_records;i++)
-		{
-		    remove_info(split_records[i]);
-		    vector<bcf1_t *> atomised_variants = atomise(split_records[i],hdr_out,counts);
-		    for(size_t j=0;j<atomised_variants.size();j++)
+		    if(realign(norm_args,atomised_variants[j]) == ERR_REF_MISMATCH)
 		    {
-			if(realign(norm_args,atomised_variants[j]) == ERR_REF_MISMATCH)
+			if(exit_on_mismatch)
 			{
-			    if(exit_on_mismatch)
-			    {
 				die("vcf did not match the reference");
-			    }
-			    else
-			    {
-				norm_args->nskipped++;
-			    }			    
 			}
-			vbuf.push_back(atomised_variants[j]);
+			else
+			{
+			    norm_args->nskipped++;
+			}			    
+		    }
+		    vbuf.push_back(atomised_variants[j]);
 //			bcf_destroy1(atomised_variants[j]);
-		    }		    
-		}
-		vbuf.flush(bcf_rec->pos,variant_fp,hdr_out);
+		}		    
 	    }
+	    vbuf.flush(line->pos,variant_fp,hdr_out);
 	}
     }
+
     vbuf.flush(variant_fp,hdr_out);
     bcf_hdr_destroy(hdr_in);
     bcf_hdr_destroy(hdr_out);
-    bcf_destroy1(bcf_rec);
+    bcf_destroy1(line);
     ks_destroy(ks);
     gzclose(fp);
     gzclose(depth_fp);  
