@@ -320,8 +320,6 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
     Counts counts;
     counts.mnp=0;
     counts.complex=0;
-    kstream_t *ks;
-    kstring_t str = {0,0,0};    
     gzFile fp = gzopen(input, "r");
     VarBuffer vbuf(1000);
     int prev_rid = -1;
@@ -383,13 +381,10 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
 
     args_t *norm_args = init_vcfnorm(hdr_out,ref);
     norm_args->check_ref |= CHECK_REF_WARN;
-    bcf1_t *bcf_rec = bcf_init();
     bcf_hdr_write(variant_fp, hdr_out);
-    kstring_t work1 = {0,0,0};            
-    int buf[5];
-    ks_tokaux_t aux;
 
-    int ref_len,alt_len;
+    int buf[5];
+
     bcf_srs_t *sr =  bcf_sr_init() ; ///htslib synced reader.
     if(!(bcf_sr_add_reader (sr, input )))
     {
@@ -397,31 +392,39 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
     }
     bcf1_t *line;
     int dp,gq,end;
+    int *dp_ptr = &dp;
+    int *gq_ptr = &gq;
+    int *end_ptr = &end;
     int nval=1;
     while(bcf_sr_next_line (sr))
     {
 	line =  bcf_sr_get_line(sr, 0);
-	if(bcf_get_format_int32(sr->readers[0].header, line, "DP", &dp , &nval) == 1)
+	bcf_unpack(line,BCF_UN_ALL);
+	if(bcf_get_format_int32(sr->readers[0].header, line, "DP", &dp_ptr , &nval) == 1)
 	{
 	    buf[0] = line->rid;
 	    buf[1] = line->pos;
-	    int alt_len = strlen(line->d.allele[1]);
-	    if(bcf_get_format_int32(sr->readers[0].header, line, "END", &end , &nval) == 1)
+	    if(bcf_get_format_int32(sr->readers[0].header, line, "END", &end_ptr , &nval) == 1)
 	    {
 		buf[2] = end - 1;
 	    }
 	    else
 	    {
+		int alt_len = 1;
+		if(line->n_allele>1)
+		{
+		    alt_len = strlen(line->d.allele[1]);
+		}
 		buf[2] = buf[1]+alt_len-1;
 	    }
 	    buf[3] = dp;
-	    if(bcf_get_format_int32(sr->readers[0].header, line, "GQ", &gq , &nval) == 1)
+	    if(bcf_get_format_int32(sr->readers[0].header, line, "GQ", &gq_ptr , &nval) == 1)
 	    {
 		buf[4] = gq;
 	    }
 	    else
 	    {
-		assert(bcf_get_format_int32(sr->readers[0].header, line, "GQX", &gq , &nval)==1);
+		assert(bcf_get_format_int32(sr->readers[0].header, line, "GQX", &gq_ptr , &nval)==1);
 		buf[4]=gq/10;
 		buf[4]*=10;
 	    }
@@ -494,8 +497,7 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
     ks_destroy(ks);
     gzclose(fp);
     gzclose(depth_fp);  
-    free(str.s);
-    free(work1.s);
+
     hts_close(variant_fp);
 
     fprintf(stderr,"Variant lines   total/split/realigned/skipped:\t%d/%d/%d/%d\n", norm_args->ntotal,norm_args->nsplit,norm_args->nchanged,norm_args->nskipped);
