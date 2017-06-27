@@ -12,13 +12,13 @@
    accurate PACKAGE_VERSION as computed by the Makefile.  */
 
 /* Define if HTSlib should enable GCS support. */
-#define ENABLE_GCS 1
+/* #undef ENABLE_GCS */
 
 /* Define if HTSlib should enable plugins. */
 /* #undef ENABLE_PLUGINS */
 
 /* Define if HTSlib should enable S3 support. */
-#define ENABLE_S3 1
+/* #undef ENABLE_S3 */
 
 /* Define if you have the Common Crypto library. */
 /* #undef HAVE_COMMONCRYPTO */
@@ -33,7 +33,7 @@
 #define HAVE_GMTIME_R 1
 
 /* Define if you have libcrypto-style HMAC(). */
-#define HAVE_HMAC 1
+/* #undef HAVE_HMAC */
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
@@ -42,7 +42,7 @@
 /* #undef HAVE_LIBBZ2 */
 
 /* Define if libcurl file access is enabled. */
-#define HAVE_LIBCURL 1
+/* #undef HAVE_LIBCURL */
 
 /* Define to 1 if you have the `lzma' library (-llzma). */
 /* #undef HAVE_LIBLZMA */
