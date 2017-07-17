@@ -1,6 +1,6 @@
 /*  mendel.c counts mendel errors and phases where possible (trios and bi-allelic sites only)
 
-    Copyright (C) 2015 Illumina
+    Copyright (C) 2017 Illumina
 
     Author: Jared O'Connell <joconnell@illumina.com>
 
@@ -159,7 +159,7 @@ int mendel_main(bcf1_t *rec, bcf_hdr_t *hdr)
     {
 	int is_mendel_inconsistent=1;
 	int is_denovo=0;
-	if(pmap[i]==-1 || ped.dadidx[i]==-1 || ped.mumidx[i]==-1 )
+	if(pmap[i]==-1 || ped.dadidx[i]==-1 || ped.mumidx[i]==-1 || pmap[ped.mumidx[i]]==-1 || pmap[ped.dadidx[i]]==-1 )
 	    continue;
 
 	k0=gt[pmap[i]*2]; k1=gt[pmap[i]*2+1];
