@@ -1,4 +1,4 @@
-wget --continue https://s3-eu-west-1.amazonaws.com/agg-examples/agg_test.tar.gz
+curl -O https://s3-eu-west-1.amazonaws.com/agg-examples/agg_test.tar.gz
 tar -xzvf agg_test.tar.gz
 
 for i in 1 2;do echo ../make_chunk.py gvcfs${i}.txt -output chunk${i} -ref ref.fa -tmp /tmp/ -nproc 4 -agg ../agg;done | xargs -P2 -l python
