@@ -363,11 +363,11 @@ int ingest1(const char *input,const char *output,char *ref,bool exit_on_mismatch
 	die("INFO/BLOCKAVG_min30p3a is not present");
 
     hts_close(hfp);
-    //this is a hack to fix gvcfs where AD is incorrectly defined in the header. (vcf4.2 does not technically allow Number=R)
+    //this is a hack to fix gvcfs where AD is incorrectly defined in the header. (vcf4.1 does not technically allow Number=R)
     bcf_hdr_remove(hdr_in,BCF_HL_FMT,"AD");
     assert(  bcf_hdr_append(hdr_in,"##FORMAT=<ID=AD,Number=R,Type=Integer,Description=\"Allelic depths for the ref and alt alleles in the order listed. For indels this value only includes reads which confidently support each allele (posterior prob 0.999 or higher that read contains indicated allele vs all other intersecting indel alleles)\">") == 0);
 
-    //this is a hack to fix broken gvcfs where GQ is incorrectly labelled as float (v4.3 spec says it should be integer)
+    //enforce GQ as integer (required)
     bcf_hdr_remove(hdr_in,BCF_HL_FMT,"GQ");
     assert(  bcf_hdr_append(hdr_in,"##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">") == 0);
 
