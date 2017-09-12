@@ -1,6 +1,6 @@
 #include "agg_ingest1.h"
 //#define DEBUG
-
+#define  AGGRESSIVE_DECOMPOSE
 //just a struct to count some things
 struct Counts
 {
@@ -300,11 +300,13 @@ vector<bcf1_t *> atomise(bcf1_t *rec,bcf_hdr_t *hdr,Counts & counts)
 	    counts.mnp++;	    
 	}
     }
+#ifdef AGGRESSIVE_DECOMPOSE
     else if((ref_len!=alt_len) && (ref_len!=1) && (alt_len>1)) //complex substitution
     {
 	vt_aggressive_decompose(rec,hdr,ret);
 	counts.complex++;
     }
+#endif
     else //variant already is atomic
     {
 	bcf1_t *new_var = bcf_dup(rec);
