@@ -128,7 +128,7 @@ chrQ      100     G    C,<M>    1/2
 ```
 implementing the correct behaviour is complicated by the fact one of the variants may be non-passing. We face a similar issue with deletions that overlap downstream variants.
 
-We decompose MNPs and perform basic left-shifting/trimming of indels (taken from `bcftools norm` implementation). We apply the complex substitution decomposition routine implemented in [vt](http://genome.sph.umich.edu/wiki/Vt), but as noted on their webpage, their is no unique solution for this problem.
+We decompose MNPs and perform basic left-shifting/trimming of indels (taken from `bcftools norm` implementation). We apply the complex substitution decomposition routine implemented in [vt](http://genome.sph.umich.edu/wiki/Vt), but as noted on their webpage, there is no unique solution for this problem.
 
 All sites are currently treated as diploid, this is obviously wrong for male chrX, chrY and chrM.  This can be fixed via [post-hoc processing](https://github.com/Illumina/agg/issues/1).
 
