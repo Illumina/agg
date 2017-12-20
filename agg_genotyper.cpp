@@ -172,9 +172,9 @@ int aggReader::moveDepthForward()
 		dp_line[j] = bcf_sr_get_line(dp_rdr,j);	  
 		ngq=ndp=bcf_hdr_nsamples(dp_rdr->readers[j].header);
 		if(	bcf_get_format_int32(dp_rdr->readers[j].header, dp_line[j], "DP",&dp_ptr , &ndp) <= 0)
-		    die("Problem with a .dpt file at position "+dp_line[j]->pos+1);
+		    die("Problem with a .dpt file at position "+std::to_string(dp_line[j]->pos+1));
 		if(	bcf_get_format_int32(dp_rdr->readers[j].header, dp_line[j], "GQ",&gq_ptr , &ngq) <= 0)	  
-		    die("Problem with a .dpt file at position "+dp_line[j]->pos+1);//change this to gq
+		    die("Problem with a .dpt file at position "+std::to_string(dp_line[j]->pos+1));//change this to gq
 
 		dp_pos = dp_line[j]->pos;
 		dp_chr = dp_line[j]->rid;
