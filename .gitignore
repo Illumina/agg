@@ -1,9 +1,0 @@
-*.o
-*~
-*.a
-/agg
-version.h
-*.pico
-gmon.out
-*.so
-
